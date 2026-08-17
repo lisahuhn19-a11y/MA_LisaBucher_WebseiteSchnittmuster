@@ -1,0 +1,47 @@
+/* style.css - Globale Stylesheet-Datei */
+
+/* 1. Grundlegende Einstellungen für das gesamte Dokument */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Schriftart */
+    font-size: 16px;                                             /* Schriftgröße */
+    color: #72085f;                                              /* Textfarbe (dunkelgrau) */
+    background-color: #d2b9c5;                                   /* Hintergrundfarbe */
+    line-height: 1.6;                                            /* Zeilenabstand */
+    margin: 0;
+    padding: 20px;
+}
+
+/* 2. Hauptüberschrift (H1) */
+h1 {
+    font-size: 2.2rem;       /* Skaliert relativ (~35px) */
+    color: #72085f;          /* Elegantes Dunkelblau */
+}
+
+/* 3. Beschriftungen von Formularen (Label) */
+label {
+    font-size: 0.95rem;
+    font-weight: 600;        /* Halbfett */
+    color: #374151;          /* Neutrales Dunkelgrau */
+    display: inline-block;
+    margin-top: 12px;
+    margin-bottom: 6px;
+}
+
+/* 4. Links und deren Zustände */
+a {
+    color: #2563eb;          /* Kräftiges Blau */
+    font-size: 1rem;
+    text-decoration: none;   /* Unterstreichung standardmäßig aus */
+    font-weight: 500;
+}
+
+/* Beim Drüberfahren mit der Maus (Hover) */
+a:hover {
+    color: #1d4ed8;          /* Dunkleres Blau */
+    text-decoration: underline; /* Unterstreichung einblenden */
+}
+
+/* Bereits besuchte Links */
+a:visited {
+    color: #639ebc;          /* Dezent helleres Violett/Dunkelblau */
+}
