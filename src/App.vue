@@ -7,14 +7,14 @@ import { RouterLink, RouterView } from 'vue-router'
 
   <div class="layout-container">
     <header class="navbar">
-      <div class="logo">Schnittmuster Projekt</div>
+      <div class="logo">Webseite</div>
       <nav>
         <RouterLink to="/">Startseite</RouterLink>
         <RouterLink to="/schnittmuster">alle Schnittmuster</RouterLink>
         <RouterLink to="/messen">Masse nehmen</RouterLink>
         <RouterLink to="/gallerie">Gallerie</RouterLink>
         <RouterLink to="/ueber-mich">Über mich</RouterLink>
-        <button v-on="click">Profil</button>
+        <RouterLink to="/profil">Profil</RouterLink>
       </nav>
     </header>
 
@@ -37,7 +37,7 @@ import { RouterLink, RouterView } from 'vue-router'
 }
 
 .navbar {
-  background-color: #ffaa2b;
+  background-color: #ff87c4;
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
@@ -72,7 +72,7 @@ nav a.router-link-exact-active {
 }
 
 .footer {
-  background-color: #73003b;
+  background-color: #545a43;
   color: #ffe88b;
   text-align: center;
   padding: 1.5rem;

@@ -5,6 +5,7 @@ import UeberMichView from '../views/UeberMichView.vue'
 import GallerieView from '@/views/GallerieView.vue'
 import SchnittmusterView from '@/views/SchnittmusterView.vue'
 import MessenView from '@/views/MessenView.vue'
+import ProfilView from '@/views/ProfilView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,6 +35,11 @@ const router = createRouter({
       name: 'messen',
       component: MessenView
     },
+    {
+      path: '/profil',
+      name: 'profil',
+      component: ProfilView
+    }
   ]
 })
 
