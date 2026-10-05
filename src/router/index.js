@@ -5,6 +5,7 @@ import UeberMichView from '../views/UeberMichView.vue'
 import GallerieView from '@/views/GallerieView.vue'
 import SchnittmusterView from '@/views/SchnittmusterView.vue'
 import MessenView from '@/views/MessenView.vue'
+import Messen1 from '@/views/Messen1.vue'
 import ProfilView from '@/views/ProfilView.vue'
 
 const router = createRouter({
@@ -34,6 +35,11 @@ const router = createRouter({
       path: '/messen',
       name: 'messen',
       component: MessenView
+    },
+    {
+      path: '/messen1',
+      name: 'messen1',
+      component: Messen1
     },
     {
       path: '/profil',
