@@ -6,6 +6,7 @@
 <template>
   <div>
     <h1>Über mich</h1>
+    <h2>Biografie</h2>
     <p>Ich bin Lisa Bucher und habe im Rahmen meiner Maturaarbeit diese Webseite erstellt.</p>
     <p>Schon früh hat mir meine Mutter das Nähen beigebracht. Zu meinem fünften Geburtstag bekam 
       ich dann eine Kindernähmaschine, mit der ich Kleider für meinen Teddybären und andere kleine 
@@ -19,6 +20,8 @@
       sogenannten "Turlte" Linien gezeichnet haben. Das hat mich an die Schnittmuster erinnert. 
       Ich dachte mir, dass es doch möglich sein musste, mithilfe von Körpermassen die Schnittmuster 
       direkt digital zeichnen zu lassen und mithilfe von Variabeln direkt anzupassen. </p>
+
+    <h2>Github</h2>
     <p>(hier kommt noch der Link zum Github Repository)</p>
 
   </div>

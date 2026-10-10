@@ -13,8 +13,10 @@ import { RouterLink, RouterView } from 'vue-router'
         <RouterLink to="/schnittmuster">alle Schnittmuster</RouterLink>
         <RouterLink to="/messen">Masse nehmen</RouterLink>
         <RouterLink to="/messen1">Masse nehmen 1</RouterLink>
+        <RouterLink to="/messen2">Masse nehmen 2</RouterLink>
         <RouterLink to="/gallerie">Gallerie</RouterLink>
         <RouterLink to="/ueber-mich">Über mich</RouterLink>
+        <RouterLink to="/login">Login</RouterLink>
         <RouterLink to="/profil">Profil</RouterLink>
       </nav>
     </header>
