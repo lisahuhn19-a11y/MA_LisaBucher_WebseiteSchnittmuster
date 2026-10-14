@@ -7,13 +7,14 @@ import { RouterLink, RouterView } from 'vue-router'
 
   <div class="layout-container">
     <header class="navbar">
-      <div class="logo">Webseite</div>
+      <div class="logo">MiauMass</div>
       <nav>
         <RouterLink to="/">Startseite</RouterLink>
         <RouterLink to="/schnittmuster">alle Schnittmuster</RouterLink>
-        <RouterLink to="/messen">Masse nehmen</RouterLink>
+        <!--<RouterLink to="/messen">Masse nehmen</RouterLink> -->
         <RouterLink to="/messen1">Masse nehmen 1</RouterLink>
         <RouterLink to="/messen2">Masse nehmen 2</RouterLink>
+        <RouterLink to="/messen3">Masse nehmen 3</RouterLink>
         <RouterLink to="/gallerie">Gallerie</RouterLink>
         <RouterLink to="/ueber-mich">Über mich</RouterLink>
         <RouterLink to="/login">Login</RouterLink>
@@ -26,7 +27,7 @@ import { RouterLink, RouterView } from 'vue-router'
     </main>
 
     <footer class="footer">
-      <p>Maturaarbeit von Lisa Bucher | Kontakt: lisa.bucher@stud.schulegl.ch</p>
+      <p>Maturaarbeit von Lisa Bucher | Kontakt: lisahuhn19@gmail.com</p>
       <p>&copy; 2026 Alle Rechte vorbehalten</p>
     </footer>
   </div>
@@ -45,7 +46,7 @@ import { RouterLink, RouterView } from 'vue-router'
   display: flex;
   justify-content: space-between;
   align-items: center;
-  /*box-shadow: 0 2px 5px rgba(0,0,0,0.1);*/
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .logo {

@@ -17,7 +17,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { auth } from '@/firebase' // Pfad anpassen, falls nötig
+import { auth } from '@/firebase'
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword 

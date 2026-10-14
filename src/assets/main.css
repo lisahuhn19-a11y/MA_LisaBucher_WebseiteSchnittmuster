@@ -7,13 +7,13 @@
 body {
   font-family: 'Space Mono', sans-serif;
   font-size: 18px;
-  color: #545a43;
-  background-color: #faf7ee;
+  color: #1c1c1c;
+  background-color: #fffefc;
   line-height: 1.6;
 }
 
 h1 {
-    font-family: 'Pinyon Script', cursive;
+    font-family: 'Poppins', sans-serif;
     font-size: 100px;
     color: #ff0082;
     font-weight: 400;
@@ -24,7 +24,7 @@ h1 {
 h2 {
     font-family: 'Poppins', sans-serif;
     font-size: 24px;
-    color: #ffaa2b;
+    color: #ff2ba0;
 
     margin-bottom: 20px;
 }
