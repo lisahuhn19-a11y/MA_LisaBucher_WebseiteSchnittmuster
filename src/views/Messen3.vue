@@ -1,23 +1,24 @@
 <!-- src/views/StartseiteView.vue -->
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { auth, db } from '@/firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 
 const currentUser = ref(null)
 const isSaving = ref(false)
-
-// Steuerung des Ablaufs: 1 = Anleitung, 2 = Auswahl/Setup, 3 = Wizard (Messung)
 const setupStep = ref(1)
 
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        currentUser.value = user
-        await loadUserMeasurements(user.uid)
-    } else {
-        currentUser.value = null
-    }
+// Ein zentraler Firebase-Listener, der den User lädt und direkt die Maße holt
+onMounted(() => {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            currentUser.value = user
+            await loadUserMeasurements(user.uid)
+        } else {
+            currentUser.value = null
+        }
+    })
 })
 
 async function loadUserMeasurements(uid) {
@@ -49,6 +50,10 @@ async function saveMeasurements() {
 
         const docRef = doc(db, 'userMeasurements', currentUser.value.uid)
         await setDoc(docRef, measurementsData, { merge: true })
+
+        // HIER WECHSELN WIR ZU SCHRITT 4:
+        setupStep.value = 4
+
     } catch (error) {
         console.error('Fehler beim Speichern:', error)
     } finally {
@@ -174,11 +179,13 @@ function backToInstructions() {
 </script>
 
 <template>
-    <div class="container">
-        <h1>Variante 3</h1>
-
+    <div>
         <!-- SCHRITT 1: Anleitungen & Vorbereitung -->
-        <div v-if="setupStep === 1" class="info-screen">
+        <div v-if="setupStep === 1" class="full-width-screen">
+            <h1>Variante 3</h1>
+
+            <p v-if="!currentUser">Du bist noch nicht angemeldet. Melde dich <RouterLink to="/login">hier</RouterLink> an, um deine Masse später zu speichern!</p>
+
             <div class="form-container">
                 <div class="info-section">
                     <h2>Wichtiges zum Messen</h2>
@@ -187,7 +194,7 @@ function backToInstructions() {
                         <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
                         <li>Benutze ein flexibles Massband.</li>
                         <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
-                        <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Messband liegt.</li>
+                        <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Massband liegt.</li>
                         <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
                         <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
                     </ul>
@@ -195,9 +202,7 @@ function backToInstructions() {
                     <h2>Vor dem Messen</h2>
                     <ul>
                         <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
-                        <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. 
-                            Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der 
-                            jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
+                        <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
                     </ul>
                 </div>
                 
@@ -205,107 +210,139 @@ function backToInstructions() {
             </div>
         </div>
 
-        <!-- SCHRITT 2: Einstellungen (Kleidungsstück / Größe wählen) im Kasten-Design -->
-        <div v-else-if="setupStep === 2" class="setup-screen">
-            <button @click="backToInstructions" class="back-link">← Zurück zur Anleitung</button>
+        <!-- SCHRITT 2 & 3 -->
+        <div v-else-if="setupStep === 2 || setupStep === 3" class="container">
+            <h1>Variante 3</h1>
 
-            <div class="measurement-step-card">
-                <h2>Einstellungen für die Messung</h2>
-                
-                <div class="form-container">
-                    <div class="form-group mode-selection">
-                        <label>Anzeige:</label>
-                        <div class="radio-group">
-                            <label v-for="mode in viewModes" :key="mode.id" class="radio-label">
-                                <input
-                                    type="radio"
-                                    name="viewMode"
-                                    :value="mode.id"
-                                    v-model="viewMode"
-                                />
-                                {{ mode.name }}
-                            </label>
+            <!-- SCHRITT 2: Einstellungen -->
+            <div v-if="setupStep === 2" class="setup-screen">
+                <button @click="backToInstructions" class="back-link">← Zurück zur Anleitung</button>
+
+                <div class="measurement-step-card">
+                    <h2>Einstellungen für die Messung</h2>
+                    
+                    <div class="form-container">
+                        <div class="form-group mode-selection">
+                            <label>Anzeige:</label>
+                            <div class="radio-group">
+                                <label v-for="mode in viewModes" :key="mode.id" class="radio-label">
+                                    <input
+                                        type="radio"
+                                        name="viewMode"
+                                        :value="mode.id"
+                                        v-model="viewMode"
+                                    />
+                                    {{ mode.name }}
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group" v-if="viewMode === 'specific'">
+                            <label for="cloth-select">Kleidungsstück:</label>
+                            <select id="cloth-select" v-model="selectedCloth">
+                                <option v-for="item in clothes" :key="item.id" :value="item.id">
+                                    {{ item.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="size-select">Standardgrösse laden:</label>
+                            <select id="size-select" v-model="selectedSize" @change="applyStandardSize">
+                                <option value="S">Grösse S</option>
+                                <option value="M">Grösse M</option>
+                                <option value="L">Grösse L</option>
+                                <option value="XL">Grösse XL</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="form-group" v-if="viewMode === 'specific'">
-                        <label for="cloth-select">Kleidungsstück:</label>
-                        <select id="cloth-select" v-model="selectedCloth">
-                            <option v-for="item in clothes" :key="item.id" :value="item.id">
-                                {{ item.name }}
-                            </option>
-                        </select>
+                    <div class="card-footer">
+                        <button @click="startWizard" class="primary-btn">Messung starten</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCHRITT 3: Einzelanzeige der Maße (Wizard) -->
+            <div v-else-if="setupStep === 3" class="wizard-screen">
+                <button @click="backToSetup" class="back-link">← Zurück zur Auswahl</button>
+
+                <div v-if="currentMeasurement" class="measurement-step-card">
+                    <h2>{{ currentMeasurement.label }}</h2>
+                    <p class="instruction-placeholder">{{ currentMeasurement.instruction }}</p>
+
+                    <div class="input-wrapper large">
+                        <input 
+                            type="number"
+                            :id="currentMeasurement.id"
+                            v-model.number="currentMeasurement.value"
+                            autofocus
+                        />
+                        <span class="unit">{{ currentMeasurement.unit }}</span>
                     </div>
 
-                    <div class="form-group">
-                        <label for="size-select">Standardgrösse laden:</label>
-                        <select id="size-select" v-model="selectedSize" @change="applyStandardSize">
-                            <option value="S">Grösse S</option>
-                            <option value="M">Grösse M</option>
-                            <option value="L">Grösse L</option>
-                            <option value="XL">Grösse XL</option>
-                        </select>
+                    <div class="wizard-nav-buttons">
+                        <button @click="prevStep" :disabled="currentStepIndex === 0" class="secondary-btn">Zurück</button>
+                        
+                        <button v-if="currentStepIndex < totalSteps - 1" @click="nextStep" class="primary-btn">Weiter</button>
+                        
+                        <div v-else class="save-section">
+                            <div v-if="currentUser" class="form-group">
+                                <button @click="saveMeasurements" class="save-btn">
+                                    {{ isSaving ? 'Wird gespeichert...' : 'Masse speichern' }}
+                                </button>
+                            </div>
+                            <div v-else class="login-hint">
+                                <p><em>Melde dich an, um deine Masse dauerhaft zu speichern.</em></p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card-footer">
-                    <button @click="startWizard" class="primary-btn">Messung starten</button>
+                <!-- Fortschrittsbalken -->
+                <div class="progress-container">
+                    <div class="progress-bar-background">
+                        <div class="progress-bar-fill" :style="{ width: progressPercentage + '%' }"></div>
+                    </div>
+                    <span class="progress-text">{{ currentStepIndex + 1 }}/{{ totalSteps }}</span>
                 </div>
             </div>
         </div>
 
-        <!-- SCHRITT 3: Einzelanzeige der Maße (Wizard) -->
-        <div v-else-if="setupStep === 3" class="wizard-screen">
-            <button @click="backToSetup" class="back-link">← Zurück zur Auswahl</button>
-
-            <div v-if="currentMeasurement" class="measurement-step-card">
-                <h2>{{ currentMeasurement.label }}</h2>
-                <p class="instruction-placeholder">{{ currentMeasurement.instruction }}</p>
-
-                <div class="input-wrapper large">
-                    <input 
-                        type="number"
-                        :id="currentMeasurement.id"
-                        v-model.number="currentMeasurement.value"
-                        autofocus
-                    />
-                    <span class="unit">{{ currentMeasurement.unit }}</span>
-                </div>
-
-                <div class="wizard-nav-buttons">
-                    <button @click="prevStep" :disabled="currentStepIndex === 0" class="secondary-btn">Zurück</button>
-                    
-                    <button v-if="currentStepIndex < totalSteps - 1" @click="nextStep" class="primary-btn">Weiter</button>
-                    
-                    <div v-else class="save-section">
-                        <div v-if="currentUser" class="form-group">
-                            <button @click="saveMeasurements" class="save-btn">
-                                {{ isSaving ? 'Wird gespeichert...' : 'Masse speichern' }}
-                            </button>
-                        </div>
-                        <div v-else class="login-hint">
-                            <p><em>Melde dich an, um deine Masse dauerhaft zu speichern.</em></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Fortschrittsbalken unten -->
-            <div class="progress-container">
-                <div class="progress-bar-background">
-                    <div class="progress-bar-fill" :style="{ width: progressPercentage + '%' }"></div>
-                </div>
-                <span class="progress-text">{{ currentStepIndex + 1 }}/{{ totalSteps }}</span>
-            </div>
+        <!-- SCHRITT 4: Erfolgsmeldung -->
+        <div v-if="setupStep === 4" class="full-width-screen">
+            <p>Deine Masse wurden erfolgreich gespeichert. <RouterLink to="/schnittmuster">Hier</RouterLink> geht es weiter zu den Schnittmustern.</p>
         </div>
     </div>
 </template>
 
 <style scoped>
+    /* Standard-Container für Schritt 2 & 3 (schmal, 500px und zentriert) */
     .container {
         max-width: 500px;
         margin: 0 auto;
         padding: 20px;
+        box-sizing: border-box;
+    }
+
+    /* Schritt 1 & 4: Gehen über den gesamten Bildschirm */
+    .full-width-screen {
+        width: 100%;
+        padding: 20px 40px;
+        box-sizing: border-box;
+        text-align: center;
+    }
+
+    .full-width-screen h1 {
+        text-align: center;
+        width: 100%;
+        margin-bottom: 30px;
+    }
+
+    .full-width-screen .form-container {
+        max-width: 900px;
+        margin: 0 auto;
+        text-align: left;
     }
 
     .info-section {
@@ -345,7 +382,7 @@ function backToInstructions() {
         border: 1px solid #e0e0e0;
         padding: 24px;
         border-radius: 8px;
-        margin-bottom: 40px;
+        margin-bottom: 20px;
     }
 
     .card-footer {
@@ -358,9 +395,9 @@ function backToInstructions() {
         background: #ffcdec;
         border-left: 4px solid #ffb5d8;
         padding: 10px;
-        margin: 15px 0;
+        margin: 16px 0;
         font-style: italic;
-        color: #664d03;
+        color: #000000;
     }
 
     .input-wrapper.large {
@@ -395,25 +432,21 @@ function backToInstructions() {
     .back-link {
         background: none;
         border: none;
-        color: #007bff;
+        color: #8a0068;
         cursor: pointer;
         padding: 0;
         margin-bottom: 15px;
         font-size: 0.95rem;
     }
 
-    /* Fortschrittsbalken unten */
+    /* Fortschrittsbalken direkt unter dem Kasten */
     .progress-container {
         display: flex;
         align-items: center;
         gap: 12px;
-        position: fixed;
-        bottom: 0;
-        left: 0;
         width: 100%;
-        background: white;
-        padding: 12px 20px;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        background: transparent;
+        padding: 12px 0;
         box-sizing: border-box;
     }
 
@@ -427,7 +460,7 @@ function backToInstructions() {
 
     .progress-bar-fill {
         height: 100%;
-        background: #42b883;
+        background: #b842a1;
         transition: width 0.3s ease;
     }
 

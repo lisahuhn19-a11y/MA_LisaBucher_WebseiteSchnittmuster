@@ -95,6 +95,8 @@ const relevantMeasurements = computed(() => {
 
 <template>
     <h1>Variante 2</h1>
+    <p v-if="!currentUser">Du bist noch nicht angemeldet. Melde dich <RouterLink to="/login">hier</RouterLink> an, um deine Masse später zu speichern!</p>
+
 
     <div class="view-container">
         <div class="sidebar-left">

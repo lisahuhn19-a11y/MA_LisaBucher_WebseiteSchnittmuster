@@ -1,12 +1,13 @@
 <!-- src/views/StartseiteView.vue -->
 <script setup>
 
-import {ref, computed, watch} from 'vue'
+import {ref, computed, onMounted, watch} from 'vue'
 import {auth, db} from '@/firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 
 const currentUser = ref(null)
+const isLoading = ref(true)
 const isSaving = ref(false)
 
 onAuthStateChanged(auth, async (user) => {
@@ -16,6 +17,7 @@ onAuthStateChanged(auth, async (user) => {
     } else {
         currentUser.value = null
     }
+    isLoading.value = false
 })
 
 async function loadUserMeasurements(uid) {
@@ -143,85 +145,177 @@ const relevantMeasurements = computed(() => {
 
 <template>
     <h1>Variante 1</h1>
-    <h2>wichtiges zum Messen</h2>
-    <ul>
-        <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
-        <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
-        <li>Benutze ein flexibles Massband.</li>
-        <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
-        <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Messband liegt.</li>
-        <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
-        <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
-    </ul>
-    <h2>vor dem Messen</h2>
-    <ul>
-        <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
-        <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. 
-            Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der 
-            jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
-    </ul>
 
-<div class="controls">
-    <div class="form-container">
-        <div class="box-container">
-            <div class="form-group mode-selection">
-                <label>Anzeige:</label>
-                <div class="radio-group">
-                    <label v-for="mode in viewModes" :key="mode.id" class="radio-label">
-                        <input
-                            type="radio"
-                            name="viewMode"
-                            :value="mode.id"
-                            v-model="viewMode"
-                        />
-                        {{ mode.name }}
-                    </label>
+    <div v-if="isLoading">
+        <p>Seite Ladet ...</p>
+    </div>
+
+    <div v-if="!currentUser">
+        <p>Du bist noch nicht angemeldet. Melde dich <RouterLink to="/login">hier</RouterLink> an, um deine Masse später zu speichern!</p>
+    </div>
+
+    <div v-else>
+        <h2>wichtiges zum Messen</h2>
+        <ul>
+            <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
+            <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
+            <li>Benutze ein flexibles Massband.</li>
+            <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
+            <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Messband liegt.</li>
+            <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
+            <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
+        </ul>
+        <h2>vor dem Messen</h2>
+        <ul>
+            <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
+            <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. 
+                Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der 
+                jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
+        </ul>
+
+        <div class="controls">
+            <div class="form-container">
+                <div class="box-container">
+                    <div class="form-group mode-selection">
+                        <label>Anzeige:</label>
+                        <div class="radio-group">
+                            <label v-for="mode in viewModes" :key="mode.id" class="radio-label">
+                                <input
+                                    type="radio"
+                                    name="viewMode"
+                                    :value="mode.id"
+                                    v-model="viewMode"
+                                />
+                                {{ mode.name }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" v-if="viewMode === 'specific'">
+                        <label for="cloth-selected">Kleidungsstück:</label>
+                        <select id="cloth-select" v-model="selectedCloth">
+                            <option v-for="item in clothes" :key="item.id" :value="item.id">
+                                {{ item.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="size-select">Standardgrösse laden:</label>
+                        <select id="size-select" v-model="selectedSize" @change="applyStandardSize">
+                            <option value="S">Grösse S</option>
+                            <option value="M">Grösse M</option>
+                            <option value="L">Grösse L</option>
+                            <option value="XL">Grösse XL</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group" v-if="viewMode === 'specific'">
-                <label for="cloth-selected">Kleidungsstück:</label>
-                <select id="cloth-select" v-model="selectedCloth">
-                    <option v-for="item in clothes" :key="item.id" :value="item.id">
-                        {{ item.name }}
-                    </option>
-                </select>
+            <div class="measurements-container">
+                <template v-for="item in relevantMeasurements" :key="item.id">
+                    <label :for="item.id" class="measurement-label">{{ item.label }}</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="number"
+                            :id="item.id"
+                            v-model.number="item.value"
+                        />
+                        <span class="unit">{{ item.unit }}</span>
+                    </div>
+                </template>
             </div>
-
-            <div class="form-group">
-                <label for="size-select">Standardgrösse laden:</label>
-                <select id="size-select" v-model="selectedSize" @change="applyStandardSize">
-                    <option value="S">Grösse S</option>
-                    <option value="M">Grösse M</option>
-                    <option value="L">Grösse L</option>
-                    <option value="XL">Grösse XL</option>
-                </select>
+            <div class="form-group" v-if="currentUser">
+                <button @click="saveMeasurements" class="save-btn">
+                    {{ isSaving ? 'Wird gespeichert...' : 'Masse speichern' }}
+                </button>
+            </div>
+            <div v-else class="login-hint">
+                <p><em>Melde dich an, um deine Masse dauerhaft zu speichern.</em></p>
             </div>
         </div>
     </div>
 
-    <div class="measurements-container">
-        <template v-for="item in relevantMeasurements" :key="item.id">
-            <label :for="item.id" class="measurement-label">{{ item.label }}</label>
-            <div class="input-wrapper">
-                <input 
-                    type="number"
-                    :id="item.id"
-                    v-model.number="item.value"
-                />
-                <span class="unit">{{ item.unit }}</span>
+
+        <h2>wichtiges zum Messen</h2>
+        <ul>
+            <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
+            <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
+            <li>Benutze ein flexibles Massband.</li>
+            <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
+            <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Messband liegt.</li>
+            <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
+            <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
+        </ul>
+        <h2>vor dem Messen</h2>
+        <ul>
+            <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
+            <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. 
+                Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der 
+                jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
+        </ul>
+
+    <div class="controls">
+        <div class="form-container">
+            <div class="box-container">
+                <div class="form-group mode-selection">
+                    <label>Anzeige:</label>
+                    <div class="radio-group">
+                        <label v-for="mode in viewModes" :key="mode.id" class="radio-label">
+                            <input
+                                type="radio"
+                                name="viewMode"
+                                :value="mode.id"
+                                v-model="viewMode"
+                            />
+                            {{ mode.name }}
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" v-if="viewMode === 'specific'">
+                    <label for="cloth-selected">Kleidungsstück:</label>
+                    <select id="cloth-select" v-model="selectedCloth">
+                        <option v-for="item in clothes" :key="item.id" :value="item.id">
+                            {{ item.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="size-select">Standardgrösse laden:</label>
+                    <select id="size-select" v-model="selectedSize" @change="applyStandardSize">
+                        <option value="S">Grösse S</option>
+                        <option value="M">Grösse M</option>
+                        <option value="L">Grösse L</option>
+                        <option value="XL">Grösse XL</option>
+                    </select>
+                </div>
             </div>
-        </template>
-     </div>
-     <div class="form-group" v-if="currentUser">
-        <button @click="saveMeasurements" class="save-btn">
-            {{ isSaving ? 'Wird gespeichert...' : 'Masse speichern' }}
-        </button>
+        </div>
+
+        <div class="measurements-container">
+            <template v-for="item in relevantMeasurements" :key="item.id">
+                <label :for="item.id" class="measurement-label">{{ item.label }}</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="number"
+                        :id="item.id"
+                        v-model.number="item.value"
+                    />
+                    <span class="unit">{{ item.unit }}</span>
+                </div>
+            </template>
+        </div>
+        <div class="form-group" v-if="currentUser">
+            <button @click="saveMeasurements" class="save-btn">
+                {{ isSaving ? 'Wird gespeichert...' : 'Masse speichern' }}
+            </button>
+        </div>
+        <div v-else class="login-hint">
+            <p><em>Melde dich an, um deine Masse dauerhaft zu speichern.</em></p>
+        </div>
     </div>
-    <div v-else class="login-hint">
-        <p><em>Melde dich an, um deine Masse dauerhaft zu speichern.</em></p>
-    </div>
-</div>
 
 </template>
 
