@@ -1,15 +1,15 @@
 <!-- src/views/StartseiteView.vue -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { auth, db } from '@/firebase'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 
 const currentUser = ref(null)
+const isLoading = ref(true)
 const isSaving = ref(false)
 const setupStep = ref(1)
 
-// Ein zentraler Firebase-Listener, der den User lädt und direkt die Maße holt
 onMounted(() => {
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -18,6 +18,7 @@ onMounted(() => {
         } else {
             currentUser.value = null
         }
+        isLoading.value = false
     })
 })
 
@@ -51,7 +52,6 @@ async function saveMeasurements() {
         const docRef = doc(db, 'userMeasurements', currentUser.value.uid)
         await setDoc(docRef, measurementsData, { merge: true })
 
-        // HIER WECHSELN WIR ZU SCHRITT 4:
         setupStep.value = 4
 
     } catch (error) {
@@ -120,6 +120,8 @@ const measurements = ref([
 
 function applyStandardSize() {
     const chartValues = sizeChart[selectedSize.value]
+    if (!chartValues) return
+
     measurements.value.forEach(m => {
         if (chartValues[m.id] !== undefined) {
             m.value = chartValues[m.id]
@@ -179,141 +181,153 @@ function backToInstructions() {
 </script>
 
 <template>
-    <div>
-        <!-- SCHRITT 1: Anleitungen & Vorbereitung -->
-        <div v-if="setupStep === 1" class="full-width-screen">
-            <h1>Variante 3</h1>
+    <h1>Variante 3</h1>
 
-            <p v-if="!currentUser">Du bist noch nicht angemeldet. Melde dich <RouterLink to="/login">hier</RouterLink> an, um deine Masse später zu speichern!</p>
+    <div v-if="isLoading">
+        <p>Seite ist am laden...</p>
+    </div>
 
-            <div class="form-container">
-                <div class="info-section">
-                    <h2>Wichtiges zum Messen</h2>
-                    <ul>
-                        <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
-                        <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
-                        <li>Benutze ein flexibles Massband.</li>
-                        <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
-                        <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Massband liegt.</li>
-                        <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
-                        <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
-                    </ul>
-                    
-                    <h2>Vor dem Messen</h2>
-                    <ul>
-                        <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
-                        <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
-                    </ul>
-                </div>
-                
-                <button @click="goToSetup" class="primary-btn full-width">Weiter zur Auswahl</button>
-            </div>
-        </div>
+    <div v-else-if="!currentUser">
+        <p>Du bist noch nicht angemeldet. Melde dich <RouterLink to="/login">hier</RouterLink> an, um deine Masse später zu speichern!</p>
+    </div>
 
-        <!-- SCHRITT 2 & 3 -->
-        <div v-else-if="setupStep === 2 || setupStep === 3" class="container">
-            <h1>Variante 3</h1>
+    <div v-else>
+        <div>
+            <!-- SCHRITT 1: Anleitungen & Vorbereitung -->
+            <div v-if="setupStep === 1" class="full-width-screen">
 
-            <!-- SCHRITT 2: Einstellungen -->
-            <div v-if="setupStep === 2" class="setup-screen">
-                <button @click="backToInstructions" class="back-link">← Zurück zur Anleitung</button>
+                <p v-if="!currentUser">Du bist noch nicht angemeldet. Melde dich <RouterLink to="/login">hier</RouterLink> an, um deine Masse später zu speichern!</p>
 
-                <div class="measurement-step-card">
-                    <h2>Einstellungen für die Messung</h2>
-                    
-                    <div class="form-container">
-                        <div class="form-group mode-selection">
-                            <label>Anzeige:</label>
-                            <div class="radio-group">
-                                <label v-for="mode in viewModes" :key="mode.id" class="radio-label">
-                                    <input
-                                        type="radio"
-                                        name="viewMode"
-                                        :value="mode.id"
-                                        v-model="viewMode"
-                                    />
-                                    {{ mode.name }}
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="form-group" v-if="viewMode === 'specific'">
-                            <label for="cloth-select">Kleidungsstück:</label>
-                            <select id="cloth-select" v-model="selectedCloth">
-                                <option v-for="item in clothes" :key="item.id" :value="item.id">
-                                    {{ item.name }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="size-select">Standardgrösse laden:</label>
-                            <select id="size-select" v-model="selectedSize" @change="applyStandardSize">
-                                <option value="S">Grösse S</option>
-                                <option value="M">Grösse M</option>
-                                <option value="L">Grösse L</option>
-                                <option value="XL">Grösse XL</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="card-footer">
-                        <button @click="startWizard" class="primary-btn">Messung starten</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SCHRITT 3: Einzelanzeige der Maße (Wizard) -->
-            <div v-else-if="setupStep === 3" class="wizard-screen">
-                <button @click="backToSetup" class="back-link">← Zurück zur Auswahl</button>
-
-                <div v-if="currentMeasurement" class="measurement-step-card">
-                    <h2>{{ currentMeasurement.label }}</h2>
-                    <p class="instruction-placeholder">{{ currentMeasurement.instruction }}</p>
-
-                    <div class="input-wrapper large">
-                        <input 
-                            type="number"
-                            :id="currentMeasurement.id"
-                            v-model.number="currentMeasurement.value"
-                            autofocus
-                        />
-                        <span class="unit">{{ currentMeasurement.unit }}</span>
-                    </div>
-
-                    <div class="wizard-nav-buttons">
-                        <button @click="prevStep" :disabled="currentStepIndex === 0" class="secondary-btn">Zurück</button>
+                <div class="form-container">
+                    <div class="info-section">
+                        <h2>Wichtiges zum Messen</h2>
+                        <ul>
+                            <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
+                            <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
+                            <li>Benutze ein flexibles Massband.</li>
+                            <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
+                            <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Massband liegt.</li>
+                            <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
+                            <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
+                        </ul>
                         
-                        <button v-if="currentStepIndex < totalSteps - 1" @click="nextStep" class="primary-btn">Weiter</button>
+                        <h2>Vor dem Messen</h2>
+                        <ul>
+                            <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
+                            <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
+                        </ul>
+                    </div>
+                    
+                    <button @click="goToSetup" class="primary-btn full-width">Weiter zur Auswahl</button>
+                </div>
+            </div>
+
+            <!-- SCHRITT 2 & 3 -->
+            <div v-else-if="setupStep === 2 || setupStep === 3" class="container">
+                <h1>Variante 3</h1>
+
+                <!-- SCHRITT 2: Einstellungen -->
+                <div v-if="setupStep === 2" class="setup-screen">
+                    <button @click="backToInstructions" class="back-link">← Zurück zur Anleitung</button>
+
+                    <div class="measurement-step-card">
+                        <h2>Einstellungen für die Messung</h2>
                         
-                        <div v-else class="save-section">
-                            <div v-if="currentUser" class="form-group">
-                                <button @click="saveMeasurements" class="save-btn">
-                                    {{ isSaving ? 'Wird gespeichert...' : 'Masse speichern' }}
-                                </button>
+                        <div class="form-container">
+                            <div class="form-group mode-selection">
+                                <label>Anzeige:</label>
+                                <div class="radio-group">
+                                    <label v-for="mode in viewModes" :key="mode.id" class="radio-label">
+                                        <input
+                                            type="radio"
+                                            name="viewMode"
+                                            :value="mode.id"
+                                            v-model="viewMode"
+                                        />
+                                        {{ mode.name }}
+                                    </label>
+                                </div>
                             </div>
-                            <div v-else class="login-hint">
-                                <p><em>Melde dich an, um deine Masse dauerhaft zu speichern.</em></p>
+
+                            <div class="form-group" v-if="viewMode === 'specific'">
+                                <label for="cloth-select">Kleidungsstück:</label>
+                                <select id="cloth-select" v-model="selectedCloth">
+                                    <option v-for="item in clothes" :key="item.id" :value="item.id">
+                                        {{ item.name }}
+                                    </option>
+                                </select>
                             </div>
+
+                            <div class="form-group">
+                                <label for="size-select">Standardgrösse laden:</label>
+                                <select id="size-select" v-model="selectedSize" @change="applyStandardSize">
+                                    <option value="S">Grösse S</option>
+                                    <option value="M">Grösse M</option>
+                                    <option value="L">Grösse L</option>
+                                    <option value="XL">Grösse XL</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="card-footer">
+                            <button @click="startWizard" class="primary-btn">Messung starten</button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Fortschrittsbalken -->
-                <div class="progress-container">
-                    <div class="progress-bar-background">
-                        <div class="progress-bar-fill" :style="{ width: progressPercentage + '%' }"></div>
+                <!-- SCHRITT 3: Einzelanzeige der Maße (Wizard) -->
+                <div v-else-if="setupStep === 3" class="wizard-screen">
+                    <button @click="backToSetup" class="back-link">← Zurück zur Auswahl</button>
+
+                    <div v-if="currentMeasurement" class="measurement-step-card">
+                        <h2>{{ currentMeasurement.label }}</h2>
+                        <p class="instruction-placeholder">{{ currentMeasurement.instruction }}</p>
+
+                        <div class="input-wrapper large">
+                            <input 
+                                type="number"
+                                :id="currentMeasurement.id"
+                                v-model.number="currentMeasurement.value"
+                                autofocus
+                            />
+                            <span class="unit">{{ currentMeasurement.unit }}</span>
+                        </div>
+
+                        <div class="wizard-nav-buttons">
+                            <button @click="prevStep" :disabled="currentStepIndex === 0" class="secondary-btn">Zurück</button>
+                            
+                            <button v-if="currentStepIndex < totalSteps - 1" @click="nextStep" class="primary-btn">Weiter</button>
+                            
+                            <div v-else class="save-section">
+                                <div v-if="currentUser" class="form-group">
+                                    <button @click="saveMeasurements" class="save-btn">
+                                        {{ isSaving ? 'Wird gespeichert...' : 'Masse speichern' }}
+                                    </button>
+                                </div>
+                                <div v-else class="login-hint">
+                                    <p><em>Melde dich an, um deine Masse dauerhaft zu speichern.</em></p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <span class="progress-text">{{ currentStepIndex + 1 }}/{{ totalSteps }}</span>
+
+                    <!-- Fortschrittsbalken -->
+                    <div class="progress-container">
+                        <div class="progress-bar-background">
+                            <div class="progress-bar-fill" :style="{ width: progressPercentage + '%' }"></div>
+                        </div>
+                        <span class="progress-text">{{ currentStepIndex + 1 }}/{{ totalSteps }}</span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- SCHRITT 4: Erfolgsmeldung -->
-        <div v-if="setupStep === 4" class="full-width-screen">
-            <p>Deine Masse wurden erfolgreich gespeichert. <RouterLink to="/schnittmuster">Hier</RouterLink> geht es weiter zu den Schnittmustern.</p>
+            <!-- SCHRITT 4: Erfolgsmeldung -->
+            <div v-if="setupStep === 4" class="full-width-screen">
+                <p>Deine Masse wurden erfolgreich gespeichert. <RouterLink to="/schnittmuster">Hier</RouterLink> geht es weiter zu den Schnittmustern.</p>
+            </div>
         </div>
     </div>
+
 </template>
 
 <style scoped>
