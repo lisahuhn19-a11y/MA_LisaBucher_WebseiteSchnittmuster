@@ -15,7 +15,7 @@ import { RouterLink, RouterView } from 'vue-router'
         <RouterLink to="/messen1">Masse nehmen 1</RouterLink>
         <RouterLink to="/messen2">Masse nehmen 2</RouterLink>
         <RouterLink to="/messen3">Masse nehmen 3</RouterLink>
-        <RouterLink to="/gallerie">Gallerie</RouterLink>
+        <!--<RouterLink to="/gallerie">Gallerie</RouterLink> -->
         <RouterLink to="/ueber-mich">Über mich</RouterLink>
         <RouterLink to="/login">Login</RouterLink>
         <RouterLink to="/profil">Profil</RouterLink>

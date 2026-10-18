@@ -1,4 +1,3 @@
-<!-- src/views/StartseiteView.vue -->
 <script setup>
 
 import {ref, computed, onMounted, watch} from 'vue'
@@ -124,7 +123,7 @@ const measurements = ref([
     {id: 'OsU', label: 'Oberschenkelumfang', frames: ['leg'], value: sizeChart.M.OsU, unit: 'cm', tags:['hose']},
     {id: 'KnU', label: 'Knieumfang', frames: ['leg'], value: sizeChart.M.KnU, unit: 'cm', tags:['hose']},
     {id: 'uKnU', label: 'Unterknieumfang', frames: ['leg'], value: sizeChart.M.uKnU, unit: 'cm', tags:['hose']},
-    {id: 'WaU', label: 'Wadenumfang', frames: ['leg'], value: sizeChart.M.WaUnit, unit: 'cm', tags:['hose']},
+    {id: 'WaU', label: 'Wadenumfang', frames: ['leg'], value: sizeChart.M.WaU, unit: 'cm', tags:['hose']},
     {id: 'FeU', label: 'Fesselumfang', frames: ['leg'], value: sizeChart.M.FeU, unit: 'cm', tags:['hose']},
     {id: 'RiU', label: 'Ristumfang', frames: ['leg'], value: sizeChart.M.RiU, unit: 'cm', tags:['hose']}
 ])
@@ -152,7 +151,7 @@ function handleBlur() {
 
 const relevantMeasurements = computed(() => {
     if (viewMode.value === 'all') {
-        return measurements
+        return measurements.value
     }
     return measurements.value.filter(m => m.tags.includes(selectedCloth.value))
 })
@@ -170,11 +169,42 @@ const relevantMeasurements = computed(() => {
     </div>
 
     <div v-else>
+        <h2>Wichtiges zum Messen</h2>
+        <ul>
+            <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
+            <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
+            <li>Benutze ein flexibles Massband.</li>
+            <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
+            <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Messband liegt.</li>
+            <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
+            <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
+        </ul>
+        <h2>vor dem Messen</h2>
+        <ul>
+            <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
+            <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. 
+                Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der 
+                jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
+        </ul>
         <div class="view-container">
             <div class="sidebar-left">
-                <!-- Steuerung -->
                 <div class="controls">
-                    <div class="form-group">
+                    <div class="form-group mode-selection">
+                        <label>Anzeige:</label>
+                        <div class="radio-group">
+                            <label v-for="mode in viewModes" :key="mode.id" class="radio-label">
+                                <input 
+                                    type="radio"
+                                    name="viewMode"
+                                    :value="mode.id"
+                                    v-model="viewMode"
+                                />
+                                {{ mode.name }}
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group" v-if="viewMode === 'specific'">
                         <label for="cloth-select">Kleidungsstück:</label>
                         <select id="cloth-select" v-model="selectedCloth">
                             <option v-for="item in clothes" :key="item.id" :value="item.id">
@@ -191,6 +221,12 @@ const relevantMeasurements = computed(() => {
                             <option value="L">Grösse L</option>
                             <option value="XL">Grösse XL</option>
                         </select>
+                    </div>
+
+                    <div class="form-group">
+                        <button @click="saveMeasurements" class="save-btn" :disabled="isSaving">
+                            {{ isSaving? 'Wird gespeichert...' :'Masse ' }}
+                        </button>
                     </div>
                 </div>
 

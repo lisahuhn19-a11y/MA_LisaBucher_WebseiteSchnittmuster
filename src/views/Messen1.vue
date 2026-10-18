@@ -158,7 +158,7 @@ const relevantMeasurements = computed(() => {
     </div>
 
     <div v-else>
-        <h2>wichtiges zum Messen</h2>
+        <h2>Wichtiges zum Messen</h2>
         <ul>
             <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
             <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
