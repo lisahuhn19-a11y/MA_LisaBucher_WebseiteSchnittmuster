@@ -9,6 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 const currentUser = ref(null)
 const isLoading = ref(true)
 const isSaving = ref(false)
+const isSaved = ref(false)
 
 onMounted(() => {
     onAuthStateChanged(auth, async (user) => {
@@ -43,6 +44,7 @@ async function saveMeasurements() {
     if (!currentUser.value) return
     
     isSaving.value = true
+    isSaved.value = false
     try {
         const measurementsData = {}
         measurements.value.forEach(m => {
@@ -51,6 +53,7 @@ async function saveMeasurements() {
 
         const docRef = doc(db, 'userMeasurements', currentUser.value.uid)
         await setDoc(docRef, measurementsData, { merge: true })
+        isSaved.value = true
     } catch (error) {
         console.error('Fehler beim Speichern:', error)
     } finally {
@@ -147,10 +150,10 @@ const relevantMeasurements = computed(() => {
 </script>
 
 <template>
-    <h1>Variante 1</h1>
+    <h1>Messen 1</h1>
 
     <div v-if="isLoading">
-        <p>Seite ist am laden...</p>
+        <p>Seite ist am Laden...</p>
     </div>
 
     <div v-else-if="!currentUser">
@@ -163,6 +166,7 @@ const relevantMeasurements = computed(() => {
             <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
             <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
             <li>Benutze ein flexibles Massband.</li>
+            <li>Halte ein Geodreieck bereit.</li>
             <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
             <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Messband liegt.</li>
             <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
@@ -170,7 +174,7 @@ const relevantMeasurements = computed(() => {
         </ul>
         <h2>vor dem Messen</h2>
         <ul>
-            <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
+            <li>Markiere deine Taille (die schmalste Stelle zwischen unterem Rippenbogen und Beckenkamm), indem du eine Schnur oder ähnliches herumbindest.</li>
             <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. 
                 Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der 
                 jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
@@ -233,7 +237,10 @@ const relevantMeasurements = computed(() => {
                     {{ isSaving ? 'Wird gespeichert...' : 'Masse speichern' }}
                 </button>
             </div>
-            <div v-else class="login-hint">
+            <div v-if="isSaved">
+                <p>Masse erfolgreich gespeichert!</p>
+            </div>
+            <div v-else-if="!currentUser" class="login-hint">
                 <p><em>Melde dich an, um deine Masse dauerhaft zu speichern.</em></p>
             </div>
         </div>

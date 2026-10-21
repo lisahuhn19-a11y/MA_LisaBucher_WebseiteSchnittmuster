@@ -1,17 +1,26 @@
 <!-- src/views/StartseiteView.vue -->
 <script setup>
-// Hier kannst du später Skripte oder Daten hinzufügen
+import logo from '../assets/LogoMiauMass.svg'
 </script>
 
 <template>
   <div>
-    <h1>MiauMass</h1>
+    <div>
+      <img :src="logo" alt="Logo" class="startseite-logo"/>
+    </div>
+    
     <h2>damit dein massgeschneidertes Kleidungsstück nur noch einen Katzensprung entfernt ist...</h2>
     
     <p>Nähe deine eigenen, massgeschneiderten Kleidungsstücke mithilfe meiner Webseite</p>
-
-    <h2>Wie funktioniert es?</h2>
+    <div class="heading">
+      <h2>Wie funktioniert es?</h2>      
+    </div>
+    
     <p>1. Erfasse deine Masse -> 2. Suche dein Schnittmuster aus -> 3. Lade das PDF herunter und drucke es aus -> 4. bereit zum nähen</p>
+
+    <div v-if="!currenUser">
+      <p>Registriere dich <RouterLink to="/registrieren">hier</RouterLink> an, um deine Masse zu speichern.</p>
+    </div>
 
     <h2>Häufig gestellte Fragen</h2>
     <details>
@@ -28,3 +37,15 @@
 
   </div>
 </template>
+
+<style>
+.startseite-logo {
+  width: 500px;
+  height: auto;
+  margin-left: 0px;
+}
+
+.logo {
+  width: 0px;
+}
+</style>

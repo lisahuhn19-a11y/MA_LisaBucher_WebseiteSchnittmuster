@@ -8,6 +8,7 @@ import { onAuthStateChanged } from 'firebase/auth'
 const currentUser = ref(null)
 const isLoading = ref(true)
 const isSaving = ref(false)
+const isSaved = ref(false)
 const setupStep = ref(1)
 
 onMounted(() => {
@@ -181,10 +182,10 @@ function backToInstructions() {
 </script>
 
 <template>
-    <h1>Variante 3</h1>
+    <h1>Messen 3</h1>
 
     <div v-if="isLoading">
-        <p>Seite ist am laden...</p>
+        <p>Seite ist am Laden...</p>
     </div>
 
     <div v-else-if="!currentUser">
@@ -201,21 +202,23 @@ function backToInstructions() {
                 <div class="form-container">
                     <div class="info-section">
                         <h2>Wichtiges zum Messen</h2>
-                        <ul>
-                            <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
-                            <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
-                            <li>Benutze ein flexibles Massband.</li>
-                            <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
-                            <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Massband liegt.</li>
-                            <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
-                            <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
-                        </ul>
-                        
-                        <h2>Vor dem Messen</h2>
-                        <ul>
-                            <li>Markiere deine Taille, indem du eine Schnur oder ähnliches herumbindest.</li>
-                            <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
-                        </ul>
+        <ul>
+            <li>Suche eine Person, die dir beim Messen hilft. Besonders für die Rückenmasse ist es schwierig sich selbst zu messen.</li>
+            <li>Trage eng anliegende Kleidung oder Unterwäsche, damit deine Körperform gut sichtbar ist.</li>
+            <li>Benutze ein flexibles Massband.</li>
+            <li>Halte ein Geodreieck bereit.</li>
+            <li>Halte Klebeband, Schnur oder Kajalstift bereit, um gewisse Punkte am Körper zu markieren.</li>
+            <li>Messe dich am besten vor einem Spiegel, damit du gut siehts wo das Messband liegt.</li>
+            <li>Achte beim Vermessen auf eine aufrechte Haltung.</li>
+            <li>Achte darauf, dass das Massband deinen Körper berührt, jedoch nicht einschneidet. (nicht schummeln ;-)</li>
+        </ul>
+        <h2>vor dem Messen</h2>
+        <ul>
+            <li>Markiere deine Taille (die schmalste Stelle zwischen unterem Rippenbogen und Beckenkamm), indem du eine Schnur oder ähnliches herumbindest.</li>
+            <li>Markiere den 7. Halswirbel mit einem Stück Klebeband oder Kajalstift. Der 7. 
+                Halswirbel ertastest du, indem du den Kopf leicht nach vorne neigst. Der Knochen, der 
+                jetzt am stärksten im Nacken hervorsteht ist dein 7. Halswirbel.</li>
+        </ul>
                     </div>
                     
                     <button @click="goToSetup" class="primary-btn full-width">Weiter zur Auswahl</button>
@@ -224,7 +227,6 @@ function backToInstructions() {
 
             <!-- SCHRITT 2 & 3 -->
             <div v-else-if="setupStep === 2 || setupStep === 3" class="container">
-                <h1>Variante 3</h1>
 
                 <!-- SCHRITT 2: Einstellungen -->
                 <div v-if="setupStep === 2" class="setup-screen">
@@ -375,6 +377,13 @@ function backToInstructions() {
         grid-template-columns: 140px 1fr;
         align-items: center;
         gap: 16px;
+        width: 100%;
+    }
+
+    .form-group select {
+        width: 100%;
+        padding: 6px;
+        box-sizing: border-box;
     }
 
     .radio-group {
@@ -406,11 +415,10 @@ function backToInstructions() {
     }
 
     .instruction-placeholder {
-        background: #ffcdec;
-        border-left: 4px solid #ffb5d8;
+        background: #deccef;
+        border-left: 4px solid #340064;
         padding: 10px;
         margin: 16px 0;
-        font-style: italic;
         color: #000000;
     }
 
@@ -446,7 +454,6 @@ function backToInstructions() {
     .back-link {
         background: none;
         border: none;
-        color: #8a0068;
         cursor: pointer;
         padding: 0;
         margin-bottom: 15px;
@@ -474,7 +481,7 @@ function backToInstructions() {
 
     .progress-bar-fill {
         height: 100%;
-        background: #b842a1;
+        background: #b772f4;
         transition: width 0.3s ease;
     }
 

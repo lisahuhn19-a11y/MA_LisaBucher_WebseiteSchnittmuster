@@ -7,15 +7,15 @@
 body {
   font-family: 'Space Mono', sans-serif;
   font-size: 18px;
-  color: #1c1c1c;
-  background-color: #fffefc;
+  color: #313131;
+  background-color: #ececec;
   line-height: 1.6;
 }
 
 h1 {
     font-family: 'Poppins', sans-serif;
     font-size: 100px;
-    color: #ff0082;
+    color: #3A0E60;
     font-weight: 400;
 
     margin-bottom: 20px;
@@ -24,14 +24,52 @@ h1 {
 h2 {
     font-family: 'Poppins', sans-serif;
     font-size: 24px;
-    color: #a8ca9c;
+    color: #3A0E60;
 
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 p {
+  font-family: Arial, Helvetica, sans-serif;
   margin-bottom: 1rem;
 }
+
+ul {
+  margin-bottom: 40px;
+}
+
+button {
+  width: 120px;
+  height: 40px;
+  color: #000000;
+  background-color: #ffda24;
+  margin: 5px;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  border-radius: 2px;
+}
+
+button:hover {
+  background-color: #ffda246b;
+}
+
+a {
+  color: #8d3bd4;
+}
+
+a:hover {
+  color: #b772f4;
+}
+
+input[type="radio"] {
+  cursor: pointer;
+  accent-color: #ffda24;
+}
+
 /*<!--Loverine
 //chocolate
 //modernline
