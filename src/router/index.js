@@ -4,6 +4,7 @@ import StartseiteView from '../views/StartseiteView.vue'
 import UeberMichView from '../views/UeberMichView.vue'
 import GallerieView from '@/views/GallerieView.vue'
 import SchnittmusterView from '@/views/SchnittmusterView.vue'
+import LangarmshirtView from '@/views/LangarmshirtView.vue'
 import MessenView from '@/views/MessenView.vue'
 import Messen1 from '@/views/Messen1.vue'
 import ProfilView from '@/views/ProfilView.vue'
@@ -34,6 +35,11 @@ const router = createRouter({
       path: '/schnittmuster',
       name: 'schnittmuster',
       component: SchnittmusterView
+    },
+    {
+      path: '/langarmshirt',
+      name: 'langarmshirt',
+      component: LangarmshirtView
     },
     {
       path: '/messen',

@@ -9,5 +9,6 @@
     <h2>hier findest du eine später Auswahl an Schnittmuster</h2>
     <p>Diese Seite befindet sich momentan noch im Aufbau. Schau Anfangs Dezember nochmals vorbei um dein perfektes Schnittmuster zu finden!</p>
     
+    
   </div>
 </template>

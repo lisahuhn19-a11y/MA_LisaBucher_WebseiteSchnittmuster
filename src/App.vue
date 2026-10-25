@@ -16,6 +16,7 @@ import logo from './assets/MLogoMiauMass.svg'
         <nav>
           <RouterLink to="/">Startseite</RouterLink>
           <RouterLink to="/schnittmuster">alle Schnittmuster</RouterLink>
+          <RouterLink to="/langarmshirt">Langarmshirt</RouterLink>
           <!--<RouterLink to="/messen">Masse nehmen</RouterLink> -->
           <RouterLink to="/messen1">Messen 1</RouterLink>
           <RouterLink to="/messen2">Messen 2</RouterLink>
