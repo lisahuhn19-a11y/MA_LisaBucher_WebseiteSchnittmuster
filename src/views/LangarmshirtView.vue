@@ -266,6 +266,24 @@ const firstName = computed(() => {
   return currentUser.value.displayName.split(' ')[0]
 })
 
+const svgDimensions = computed(() => {
+  const p6x = getVal('BrW') / 4
+  const p8x = (getVal('HlB') + 0.5) + getVal('SuNL') * Math.cos((getVal('SuWi') * Math.PI) / 180)
+  const p14x = p8x + Math.cos((getVal('SuWi') * Math.PI) / 180) * getVal('ArL')
+  const p3y = getVal('MoL')
+  const p10hy = 0 - 1.5 * Math.cos((getVal('SuWi') * Math.PI) / 180)
+
+  const puffer = 20
+  
+  const width = puffer + p6x + p6x + Math.abs(p14x - p8x)
+  const height = Math.abs(p3y - p10hy) + puffer
+
+  return {
+    width: Math.round(width),
+    height: Math.round(height)
+  }
+})
+
 const downloadA4PDF = async () => {
   const pdf = new jsPDF({
     orientation: 'portrait',
@@ -276,13 +294,33 @@ const downloadA4PDF = async () => {
   const svgElement = document.querySelector('.pattern-svg-export')
   if (!svgElement) return
 
-  await pdf.svg(svgElement, {
-    x: 10,
-    y: 10,
-    width: 800,
-    height: 600
-  })
+  const a4Width = 190
+  const a4Height = 277
 
+  const totalWidth = svgDimensions.value.width*10
+  const totalHeight = svgDimensions.value.height*10
+
+  let isFirstPage = true
+
+  for (let y=0; y < totalHeight; y+= a4Height) {
+    for (let x=0; x < totalWidth; x+= a4Width) {
+      if (!isFirstPage) {
+        pdf.addPage('a4', 'portrait')
+      }
+      isFirstPage = false
+
+      svgElement.setAttribute('viewBox', `${x} ${y} $ {a4Width} ${a4Height}`)
+
+      await pdf.svg(svgElement, {
+        x: 10,
+        y:10,
+        width: a4Width,
+        height: a4Height
+      })
+    }
+  }
+
+  svgElement.setAttribute('viewBox', '0 0 500 700')
   pdf.save('schnittmusterLangarmshirt.pdf')
 }
 
@@ -308,36 +346,38 @@ const downloadA4PDF = async () => {
       <div class="svg-container">
         <h2>Schnittmuster</h2>
         
-        <svg viewBox="0 0 800 500" class="pattern-svg">
+        <svg viewBox="0 0 ${svgDimensions.width} ${svgDimensions.height}" class="pattern-svg">
           <!-- Weißer Hintergrund für das SVG -->
           <rect width="100%" height="100%" fill="white" />
 
-          <g transform="translate(50,50)">
+          <g transform="translate(10,10)">
             <path :d="vorderTeil" stroke="#4f46e5" stroke-width="0.5" fill="none" />
             <text x="70" y="120" font-size="11" fill="#4f46e5">Vorderteil</text>
           </g>
 
-          <g transform="translate(200,50)">
+          <g transform="translate(150,10)">
             <path :d="hinterTeil" fill="none" stroke="#10b981" stroke-width="0.5" />
           </g>
 
-          <g transform="translate(400,50)">
+          <g transform="translate(290,10)">
             <path :d="aermel" fill="none" stroke="#676767" stroke-width="0.5" />
           </g>
         </svg>
       </div>
 
       <div style="display:none;">
-        <svg viewBox="0 0 800 500" class="pattern-svg-export">
+        <svg viewBox="0 0 ${svgDimensions.width*10} ${svgDimensions.height*10}" class="pattern-svg-export">
           <rect width="100%" height="100%" fill="white" />
-          <g transform="translate(50,50)">
-            <path :d="vorderTeil" stroke="black" stroke-width="0.5" fill="none" />
-          </g>
-          <g transform="translate(200,50)">
-            <path :d="hinterTeil" fill="none" stroke="black" stroke-width="0.5" />
-          </g>
-          <g transform="translate(400,50)">
-            <path :d="aermel" fill="none" stroke="black" stroke-width="0.5" />
+          <g transform="scale(10)">
+            <g transform="translate(10,10)">
+              <path :d="vorderTeil" stroke="black" stroke-width="0.05" fill="none" />
+            </g>
+            <g transform="translate(150,10)">
+              <path :d="hinterTeil" fill="none" stroke="black" stroke-width="0.05" />
+            </g>
+            <g transform="translate(290,10)">
+              <path :d="aermel" fill="none" stroke="black" stroke-width="0.05" />
+            </g>
           </g>
         </svg>
       </div>
