@@ -261,26 +261,38 @@ onMounted(() => {
   loadSizesFromFirebase()
 })
 
+const currentUser = ref(null)
+
 const firstName = computed(() => {
-  if (!currentUser.value || !currentUser.value.displayName) return ''
+  if (!currentUser.value || !currentUser.value.displayName) return 'Miau'
   return currentUser.value.displayName.split(' ')[0]
 })
 
 const svgDimensions = computed(() => {
-  const p6x = getVal('BrW') / 4
+  const p6x = getVal('BrW') / 4 || 10
   const p8x = (getVal('HlB') + 0.5) + getVal('SuNL') * Math.cos((getVal('SuWi') * Math.PI) / 180)
   const p14x = p8x + Math.cos((getVal('SuWi') * Math.PI) / 180) * getVal('ArL')
-  const p3y = getVal('MoL')
+  const p3y = getVal('MoL') || 50
   const p10hy = 0 - 1.5 * Math.cos((getVal('SuWi') * Math.PI) / 180)
 
   const puffer = 20
+
+  const xVorder = puffer
+  const xHinter = xVorder + p6x + puffer
+  const xAermel = xHinter + p6x + puffer
+
+  const yPos = puffer *4
   
   const width = puffer + p6x + p6x + Math.abs(p14x - p8x)
   const height = Math.abs(p3y - p10hy) + puffer
 
   return {
-    width: Math.round(width),
-    height: Math.round(height)
+    width: Math.max(Math.round(width), 200),
+    height: Math.max(Math.round(height), 200),
+    xVorder: Math.round(xVorder),
+    xHinter: Math.round(xHinter),
+    xAermel: Math.round(xAermel),
+    yPos: Math.round(yPos)
   }
 })
 
@@ -309,7 +321,7 @@ const downloadA4PDF = async () => {
       }
       isFirstPage = false
 
-      svgElement.setAttribute('viewBox', `${x} ${y} $ {a4Width} ${a4Height}`)
+      svgElement.setAttribute('viewBox', `${x} ${y} ${a4Width} ${a4Height}`)
 
       await pdf.svg(svgElement, {
         x: 10,
@@ -346,39 +358,87 @@ const downloadA4PDF = async () => {
       <div class="svg-container">
         <h2>Schnittmuster</h2>
         
-        <svg viewBox="0 0 ${svgDimensions.width} ${svgDimensions.height}" class="pattern-svg">
-          <!-- Weißer Hintergrund für das SVG -->
+        <!-- Für die sichtbare Vorschau -->
+        <svg :viewBox="'0 0 ' + svgDimensions.width + ' ' + svgDimensions.height" class="pattern-svg">          <!-- Weißer Hintergrund für das SVG -->
+          <!-- Muster für Füllung -->
+          <defs>
+            <pattern id="dots" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
+              <circle cx="10" cy="10" r="1.5" fill="#676767" opacity="0.3" />
+            </pattern>
+
+            <pattern id="check" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#676767" stroke-width="0.5" opacity="0.3" />
+            </pattern>
+
+            <pattern id="stripes" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="20" stroke="#676767" stroke-width="1" opacity="0.3" />
+            </pattern>
+          </defs>
           <rect width="100%" height="100%" fill="white" />
 
-          <g transform="translate(10,10)">
-            <path :d="vorderTeil" stroke="#4f46e5" stroke-width="0.5" fill="none" />
-            <text x="70" y="120" font-size="11" fill="#4f46e5">Vorderteil</text>
+          <!-- SVG's für Schnittteile -->
+          <g :transform="`translate(${svgDimensions.xVorder}, ${svgDimensions.yPos})`">
+            <path :d="vorderTeil" stroke="#4f46e5" stroke-width="0.5" fill="url(#dots)" />
+            <text x="10" y="20" font-size="11" fill="#4f46e5">Vorderteil</text>
           </g>
 
-          <g transform="translate(150,10)">
-            <path :d="hinterTeil" fill="none" stroke="#10b981" stroke-width="0.5" />
+          <g :transform="`translate(${svgDimensions.xHinter}, ${svgDimensions.yPos})`">
+            <path :d="hinterTeil" fill="url(#check)" stroke="#10b981" stroke-width="0.5" />
+            <text x="10" y="20" font-size="11" fill="#10b981">Rückenteil</text>
           </g>
 
-          <g transform="translate(290,10)">
-            <path :d="aermel" fill="none" stroke="#676767" stroke-width="0.5" />
+          <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos})`">
+            <path :d="aermel" fill="url(#stripes)" stroke="#676767" stroke-width="0.5" />
+            <text x="10" y="20" font-size="11" fill="#676767">Ärmel</text>
           </g>
         </svg>
       </div>
 
       <div style="display:none;">
-        <svg viewBox="0 0 ${svgDimensions.width*10} ${svgDimensions.height*10}" class="pattern-svg-export">
+        <!-- Für das unsichtbare Export-SVG -->
+
+        <!-- Muster für Füllung -->
+        <defs>
+          <pattern id="dots" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
+            <circle cx="10" cy="10" r="1.5" fill="#676767" opacity="0.3" />
+          </pattern>
+
+          <pattern id="check" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#676767" stroke-width="0.5" opacity="0.3" />
+          </pattern>
+
+          <pattern id="stripes" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
+            <line x1="0" y1="0" x2="0" y2="20" stroke="#676767" stroke-width="1" opacity="0.3" />
+          </pattern>
+        </defs>
+
+        <!-- SVGs für Schnittteile -->
+        <svg :viewBox="'0 0 ' + (svgDimensions.width * 10) + ' ' + (svgDimensions.height * 10)" class="pattern-svg-export">
           <rect width="100%" height="100%" fill="white" />
+          
           <g transform="scale(10)">
             <g transform="translate(10,10)">
-              <path :d="vorderTeil" stroke="black" stroke-width="0.05" fill="none" />
+              <path :d="vorderTeil" stroke="black" stroke-width="0.05" fill="url(#dots)" />
+              <text x="10" y="15" font-size="1" fill="black">Vorderteil {{ firstName }}</text>
             </g>
             <g transform="translate(150,10)">
-              <path :d="hinterTeil" fill="none" stroke="black" stroke-width="0.05" />
+              <path :d="hinterTeil" fill="url(#check)" stroke="black" stroke-width="0.05" />
+              <text x="10" y="15" font-size="1" fill="black">Rückenteil {{ firstName }}</text>
             </g>
             <g transform="translate(290,10)">
-              <path :d="aermel" fill="none" stroke="black" stroke-width="0.05" />
+              <path :d="aermel" fill="url(#stripes)" stroke="black" stroke-width="0.05" />
+              <text x="10" y="15" font-size="1" fill="black">Ärmel {{ firstName }}</text>
             </g>
           </g>
+
+          <g stroke="black" stroke-width="0.2">
+            <line x1="0" y1="5" x2="10" y2="5" />
+            <line x1="5" y1="0" x2="5" y2="10" />
+
+            <line x1="180" y1="5" x2="190" y2="5" />
+            <line x1="185" y1="0" x2="185" y2="10" />
+          </g>
+  
         </svg>
       </div>
 
