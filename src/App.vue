@@ -37,6 +37,7 @@ import logo from './assets/MLogoMiauMass.svg'
       <img :src="logo" alt="Logo" class="footer-logo"/>
       <p>Maturaarbeit von Lisa Bucher | Kontakt: lisahuhn19@gmail.com</p>
       <p>&copy; 2026 Alle Rechte vorbehalten</p>
+      <p><router-link to="/impressum">Impressum</router-link> | <router-link to="/datenschutz">Datenschutz</router-link> </p>
     </footer>
   </div>
 </template>

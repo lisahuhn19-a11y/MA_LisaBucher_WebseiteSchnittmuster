@@ -13,6 +13,9 @@ import LoginView from '@/views/LoginView.vue'
 import Messen3 from '@/views/Messen3.vue'
 import RegistrierenView from '@/views/RegistrierenView.vue'
 
+import DatenschutzView from '@/views/DatenschutzView.vue'
+import ImpressumView from '@/views/ImpressumView.vue'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -75,7 +78,17 @@ const router = createRouter({
       path: '/profil',
       name: 'profil',
       component: ProfilView
-    }
+    },
+    {
+      path: '/datenschutz',
+      name: 'datenschutz',
+      component: DatenschutzView
+    },
+  {
+    path: '/impressum',
+    name: 'impressum',
+    component: ImpressumView
+  }
   ]
 })
 
