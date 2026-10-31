@@ -405,36 +405,45 @@ const downloadA4PDF = async () => {
       <div style="display:none;">
         <!-- Für das unsichtbare Export-SVG -->
 
-        <!-- Muster für Füllung -->
-        <defs>
-          <pattern id="dots" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
-            <circle cx="10" cy="10" r="1.5" fill="#676767" opacity="0.3" />
-          </pattern>
-
-          <pattern id="check" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
-            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#676767" stroke-width="0.5" opacity="0.3" />
-          </pattern>
-
-          <pattern id="stripes" x="0" y="0" width="20" height="20" pattern-units="userSpaceOnUse">
-            <line x1="0" y1="0" x2="0" y2="20" stroke="#676767" stroke-width="1" opacity="0.3" />
-          </pattern>
-        </defs>
-
         <!-- SVGs für Schnittteile -->
         <svg :viewBox="'0 0 ' + (svgDimensions.width * 10) + ' ' + (svgDimensions.height * 10)" class="pattern-svg-export">
           <rect width="100%" height="100%" fill="white" />
-          
+          <!-- Muster für Füllung -->
+          <defs>
+            <clipPath id="clip-vorder-pdf">
+              <path :d="vorderTeil" />
+            </clipPath>
+            <clipPath id="clip-hinter-pdf">
+              <path :d="hinterTeil" />
+            </clipPath>
+            <clipPath id="clip-aermel-pdf">
+              <path :d="aermel" />
+            </clipPath>
+          </defs>
+
           <g transform="scale(10)">
-            <g transform="translate(10,10)">
-              <path :d="vorderTeil" stroke="black" stroke-width="0.05" fill="url(#dots)" />
+            <g :transform="`translate(${svgDimensions.xVorder}, ${svgDimensions.yPos})`">
+              <g clip-path="url(#clip-vorder-pdf)" stroke="red" stroke-width="0.15" opacity="0.4">
+                <line v-for="i in 800" :key="'vp'+i" :x1="-200 + i*1.5" y1="-100" :x2="i*1.5" y2="500" />
+              </g>"
+              <path :d="vorderTeil" stroke="black" stroke-width="0.05" fill="none" />
               <text x="10" y="15" font-size="1" fill="black">Vorderteil {{ firstName }}</text>
             </g>
-            <g transform="translate(150,10)">
-              <path :d="hinterTeil" fill="url(#check)" stroke="black" stroke-width="0.05" />
+
+            <g :transform="`translate(${svgDimensions.xHinter}, ${svgDimensions.yPos})`">
+              <g clip-path="url(#clip-hinter-pdf)" stroke="blue" stroke-width="0.15" opacity="0.3">
+                <line v-for="i in 800" :key="'hp1'+i" :x1="-200 + i*1.5" y1="-100" :x2="i*1.5 - 100" y2="500" />
+                <line v-for="i in 800" :key="'hp2'+i" :x1="-200 + i*1.5" y1="500" :x2="i*1.5 - 100" y2="-100" />
+              </g>
+              <path :d="hinterTeil" fill="none" stroke="black" stroke-width="0.05" />
               <text x="10" y="15" font-size="1" fill="black">Rückenteil {{ firstName }}</text>
             </g>
-            <g transform="translate(290,10)">
-              <path :d="aermel" fill="url(#stripes)" stroke="black" stroke-width="0.05" />
+
+            <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos})`">
+              <g clip-path="url(#clip-aermel-pdf)" stroke="green" stroke-width="0.15" opacity="0.4">
+                <line v-for="i in 800" :key="'ap'+i" :x1="i*1.0" y1="-100" :x2="i*1.0" y2="500" />
+              </g>
+              <path :d="aermel" fill="none" stroke="black" stroke-width="0.05" />
               <text x="10" y="15" font-size="1" fill="black">Ärmel {{ firstName }}</text>
             </g>
           </g>
