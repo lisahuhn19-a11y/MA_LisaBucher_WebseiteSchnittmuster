@@ -14,12 +14,12 @@
 
     <div class="input-group">
       <label for="email">E-Mail-Adresse *</label>
-      <input id="email" v-model="email" type="text" required />
+      <input id="email" v-model="email" type="email" autocomplete="email" required />
     </div>
 
     <div class="input-group">
       <label for="password">Passwort *</label>
-      <input id="password" v-model="password" type="text" required />
+      <PasswortFeld id="password" v-model="password" autocomplete="new-password" />
     </div>
 
     <div class="input-group checkbox-group">
@@ -54,6 +54,7 @@ import {
   sendEmailVerification
 } from 'firebase/auth'
 import { useRouter } from 'vue-router'
+import PasswortFeld from '@/components/PasswortFeld.vue'
 
 const router = useRouter()
 const firstName = ref('')

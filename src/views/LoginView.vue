@@ -2,8 +2,8 @@
   <div class="auth-container">
     <h2>Einloggen</h2>
 
-    <input v-model="email" type="email" placeholder="E-Mail-Adresse" />
-    <input v-model="password" type="password" placeholder="Passwort" />
+    <input v-model="email" type="email" placeholder="E-Mail-Adresse" autocomplete="email" />
+    <PasswortFeld v-model="password" placeholder="Passwort" autocomplete="current-password" />
 
     <div class="buttons">
       <button @click="login" :disabled="isLoggingIn">
@@ -26,6 +26,7 @@ import { ref } from 'vue'
 import { auth } from '@/firebase'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { useRouter } from 'vue-router'
+import PasswortFeld from '@/components/PasswortFeld.vue'
 
 const router = useRouter()
 const email = ref('')
