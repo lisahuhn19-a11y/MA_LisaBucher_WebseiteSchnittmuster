@@ -18,7 +18,7 @@ import logo from '../assets/LogoMiauMass.svg'
     
     <p>1. Erfasse deine Masse -> 2. Suche dein Schnittmuster aus -> 3. Lade das PDF herunter und drucke es aus -> 4. bereit zum nähen</p>
 
-    <div v-if="!currenUser">
+    <div v-if="!currentUser">
       <p>Registriere dich <RouterLink to="/registrieren">hier</RouterLink> an, um deine Masse zu speichern.</p>
     </div>
 

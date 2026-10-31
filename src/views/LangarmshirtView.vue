@@ -309,8 +309,8 @@ const downloadA4PDF = async () => {
   const a4Width = 190
   const a4Height = 277
 
-  const totalWidth = svgDimensions.value.width*10
-  const totalHeight = svgDimensions.value.height*10
+  const totalWidth = Math.min((svgDimensions.value.xAermel + 150) * 10, 1500)
+  const totalHeight = Math.min((svgDimensions.value.height + 50) * 10, 1200)
 
   let isFirstPage = true
 
@@ -392,7 +392,7 @@ const downloadA4PDF = async () => {
             <text x="10" y="20" font-size="11" fill="#10b981">Rückenteil</text>
           </g>
 
-          <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos})`">
+          <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos}) rotate(90)})`">
             <g clip-path="url(#clip-aermel)" stroke="black" stroke-width="0.3" opacity="0.3">
               <line v-for="i in 50" :key="'a'+i" :x1="i*10" y1="-50" :x2="i*10" y2="300" />
             </g>
@@ -439,7 +439,7 @@ const downloadA4PDF = async () => {
               <text x="10" y="15" font-size="1" fill="black">Rückenteil {{ firstName }}</text>
             </g>
 
-            <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos})`">
+            <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos}) rotate(${SuWi})`">
               <g clip-path="url(#clip-aermel-pdf)" stroke="green" stroke-width="0.15" opacity="0.4">
                 <line v-for="i in 800" :key="'ap'+i" :x1="i*1.0" y1="-100" :x2="i*1.0" y2="500" />
               </g>

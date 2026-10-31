@@ -6,7 +6,9 @@
     <input v-model="password" type="password" placeholder="Passwort" />
 
     <div class="buttons">
-      <button @click="login">Einloggen</button>
+      <button @click="login" :disabled="isLoggingIn">
+        {{ isLoggingIn ? 'Bitte warten...' : 'Einloggen' }}
+      </button>
     </div>
 
     <div>
@@ -23,13 +25,19 @@
 import { ref } from 'vue'
 import { auth } from '@/firebase'
 import { signInWithEmailAndPassword } from 'firebase/auth'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
+const isLoggingIn = ref(false)
 
 const login = async () => {
+  // Verhindert mehrfaches Klicken, solange ein Login-Versuch läuft
+  if (isLoggingIn.value) return
+
   errorMessage.value = ''
   successMessage.value = ''
 
@@ -38,13 +46,15 @@ const login = async () => {
     return
   }
 
+  isLoggingIn.value = true
   try {
-    await signInWithEmailAndPassword(auth, email.value, password.value)
+    await signInWithEmailAndPassword(auth, email.value.trim(), password.value)
     successMessage.value = 'Erfolgreich eingeloggt!'
-    await login(auth)
     router.push('/profil')
   } catch (error) {
     errorMessage.value = error.message
+  } finally {
+    isLoggingIn.value = false
   }
 }
 </script>

@@ -22,8 +22,17 @@
       <input id="password" v-model="password" type="text" required />
     </div>
 
+    <div class="input-group checkbox-group">
+      <input id="privacy" v-model="privacyAccepted" type="checkbox" required />
+      <label for="privacy">
+        Ich habe die <RouterLink to="/datenschutz" target="_blank">Datenschutzerklärung</RouterLink> gelesen und bin einverstanden. *
+      </label>
+    </div>
+
     <div class="buttons">
-      <button @click="register">Registrieren</button>
+      <button @click="register" :disabled="isRegistering">
+        {{ isRegistering ? 'Bitte warten...' : 'Registrieren' }}
+      </button>
     </div>
 
     <div>
@@ -41,17 +50,25 @@ import { ref } from 'vue'
 import { auth } from '@/firebase'
 import { 
   createUserWithEmailAndPassword, 
-  updateProfile 
+  updateProfile,
+  sendEmailVerification
 } from 'firebase/auth'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const firstName = ref('')
 const lastName = ref('')
 const email = ref('')
 const password = ref('')
+const privacyAccepted = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const isRegistering = ref(false)
 
 const register = async () => {
+  // Verhindert mehrfaches Klicken, solange die Registrierung läuft
+  if (isRegistering.value) return
+
   errorMessage.value = ''
   successMessage.value = ''
 
@@ -61,9 +78,15 @@ const register = async () => {
     return
   }
 
+  if (!privacyAccepted.value) {
+    errorMessage.value = 'Bitte bestätige, dass du die Datenschutzerklärung gelesen hast.'
+    return
+  }
+
+  isRegistering.value = true
   try {
     // 1. User bei Firebase Auth erstellen
-    const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value)
+    const userCredential = await createUserWithEmailAndPassword(auth, email.value.trim(), password.value)
     
     // 2. Anzeigenamen (Vor- und Nachname) im Firebase User-Profil speichern
     const fullName = `${firstName.value.trim()} ${lastName.value.trim()}`
@@ -72,14 +95,17 @@ const register = async () => {
     })
 
     successMessage.value = 'Erfolgreich registriert!'
-    
-    // Felder zurücksetzen
-    firstName.value = ''
-    lastName.value = ''
-    email.value = ''
-    password.value = ''
+
+    // 3. Bestätigungs-E-Mail auf Deutsch senden
+    auth.languageCode = 'de'
+    await sendEmailVerification(userCredential.user)
+
+    // 4. Firebase meldet neue User automatisch an -> direkt weiter zum Profil
+    router.push('/profil')
   } catch (error) {
     errorMessage.value = error.message
+  } finally {
+    isRegistering.value = false
   }
 }
 </script>
