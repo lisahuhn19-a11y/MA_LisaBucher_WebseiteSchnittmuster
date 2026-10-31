@@ -1,53 +1,62 @@
 <!-- Seite für Langarmshirt -->
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { initializeApp } from 'firebase/app'
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { auth, db } from '@/firebase'
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
 import {jsPDF} from 'jspdf'
 import 'svg2pdf.js'
-
-// Daten für Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyD2whdIYR0QlMrYS4ASEyRCZXPHLfSFQCc",
-  authDomain: "miaumass.firebaseapp.com",
-  projectId: "miaumass",
-  storageBucket: "miaumass.firebasestorage.app",
-  messagingSenderId: "987929718658",
-  appId: "1:987929718658:web:274ac9bc8bf2f911bf299b"
-};
-
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
 
 const getVal = (id) => {
   const item = measurements.value.find(m => m.id === id)
   if (item) {
+    // Leeres Feld -> mit Standardwert (Grösse M) rechnen
+    if (item.value === null || item.value === '') {
+      return item.default
+    }
     return Number(item.value) || 0
+  }
+  const constructionItem = measurementsConstruction.value.find(m => m.id === id)
+  if (constructionItem) {
+    return Number(constructionItem.value) || 0
   }
   const calcItem = measurementsCalc.value.find(m => m.id === id)
   return calcItem ? Number(calcItem.value) || 0 : 0
 }
 
-//gemessene Masse
+//gemessene Masse (gleiche Kürzel wie in Messen 1-3, damit sie aus Firebase geladen werden können)
+//value: Eingabe der Person (leer, solange nichts gespeichert/eingegeben ist)
+//default: Standardwert aus Grösse M (Messen 1-3), wird verwendet, wenn das Feld leer ist
 const measurements = ref([
-  { id: 'MoL', label: 'Modelllänge', value: 50, unit: 'cm' },
-  { id: 'KoeH', label: 'Körperhöhe', value: 168, unit: 'cm' },
-  { id: 'BrU',  label: 'Brustumfang', value: 88, unit: 'cm' },
-  { id: 'TaU',  label: 'Taillenumfang', value: 72, unit: 'cm' },
-  { id: 'HueU', label: 'Hüftumfang', value: 97, unit: 'cm' },
-  { id: 'AlT',  label: 'Armlochtiefe', value: 20, unit: 'cm' },
-  { id: 'HueT', label: 'Hüfttiefe', value: 21, unit: 'cm' },
-  { id: 'BrT',  label: 'Brusttiefe', value: 28, unit: 'cm' },
-  { id: 'ArD',  label: 'Armdurchmesser', value: 9.3, unit: 'cm' },
-  { id: 'BrPa', label: 'Brustpunktabstand', value: 9, unit: 'cm' },
-  { id: 'SuB',  label: 'Schulterbreite', value: 12, unit: 'cm' },
-  { id: 'SuWi', label: 'Schulterwinkel', value: 20, unit: '°' },
-  { id: 'RueL', label: 'Rückenlänge', value: 41, unit: 'cm' },
-  { id: 'VL',   label: 'Vorderlänge', value: 45, unit: 'cm' },
-  { id: 'ArL',  label: 'Armlänge', value: 60, unit: 'cm' },
-  { id: 'OaU',  label: 'Oberarmumfang', value: 28, unit: 'cm' },
-  { id: 'HgU',  label: 'Handgelenkumfang', value: 16, unit: 'cm' },
-  { id: 'HlB',  label: 'Halslochbreite', value: 6.5, unit: 'cm' }
+  { id: 'MoL', label: 'Modelllänge', value: null, default: 50, unit: 'cm' },
+  { id: 'KoeH', label: 'Körperhöhe', value: null, default: 168, unit: 'cm' },
+  { id: 'BrU',  label: 'Brustumfang', value: null, default: 88, unit: 'cm' },
+  { id: 'TaU',  label: 'Taillenumfang', value: null, default: 72, unit: 'cm' },
+  { id: 'HueU', label: 'Hüftumfang', value: null, default: 97, unit: 'cm' },
+  { id: 'AlT',  label: 'Armlochtiefe', value: null, default: 20.1, unit: 'cm' },
+  { id: 'HueT', label: 'Hüfttiefe', value: null, default: 21, unit: 'cm' },
+  { id: 'gBrT',  label: 'Brusttiefe', value: null, default: 28.1, unit: 'cm' },
+  { id: 'gArD',  label: 'Armdurchmesser', value: null, default: 9.3, unit: 'cm' },
+  { id: 'BrPA', label: 'Brustpunktabstand', value: null, default: 8.8, unit: 'cm' },
+  { id: 'SuB',  label: 'Schulterbreite', value: null, default: 12.2, unit: 'cm' },
+  { id: 'SuWi', label: 'Schulterwinkel', value: null, default: 20, unit: '°' },
+  { id: 'gRueL', label: 'Rückenlänge', value: null, default: 41.6, unit: 'cm' },
+  { id: 'gVL',   label: 'Vorderlänge', value: null, default: 45.3, unit: 'cm' },
+  { id: 'ArL',  label: 'Armlänge', value: null, default: 60, unit: 'cm' },
+  { id: 'OaU',  label: 'Oberarmumfang', value: null, default: 28, unit: 'cm' },
+  { id: 'HagU',  label: 'Handgelenkumfang', value: null, default: 15.8, unit: 'cm' },
+  { id: 'HlB',  label: 'Halslochbreite', value: null, default: 6.5, unit: 'cm' }
+])
+
+//Masse für die Schnittkonstruktion, aus den gemessenen Massen umgerechnet
+//TODO: Formeln sind Platzhalter und müssen noch angepasst werden
+const measurementsConstruction = computed(() => [
+  {id: 'RueL', value: getVal('gRueL')/2},
+  {id: 'BrT', value: getVal('gBrT')/2},
+  {id: 'VL', value: getVal('gVL')/2},
+  {id: 'ArD', value: getVal('gArD')/2},
+  {id: 'BrPa', value: getVal('BrPA')},
+  {id: 'HgU', value: getVal('HagU')}
 ])
 
 //berechntete Masse
@@ -216,10 +225,10 @@ const aermel = computed(() => {
 
 //console.log(alpha, beta)
 
-const loadSizesFromFirebase = async () => {
+const loadSizesFromFirebase = async (uid) => {
   try {
     statusMessage.value = 'Lade Daten...'
-    const docRef = doc(db, 'schnittmuster', 'defaultUser')
+    const docRef = doc(db, 'userMeasurements', uid)
     const docSnap = await getDoc(docRef)
 
     if (docSnap.exists()) {
@@ -240,16 +249,25 @@ const loadSizesFromFirebase = async () => {
 }
 
 const saveToFirebase = async () => {
+  if (!currentUser.value) {
+    statusMessage.value = 'Bitte melde dich an, um deine Masse zu speichern.'
+    return
+  }
+
   try {
     statusMessage.value = 'Speichere...'
-    const docRef = doc(db, 'schnittmuster', 'defaultUser')
-    
+    const docRef = doc(db, 'userMeasurements', currentUser.value.uid)
+
     const dataToSave = {}
     measurements.value.forEach(item => {
-      dataToSave[item.id] = item.value
+      // Leere Felder nicht speichern, sonst würden Masse aus Messen 1-3 gelöscht
+      if (item.value !== null && item.value !== '') {
+        dataToSave[item.id] = item.value
+      }
     })
 
-    await setDoc(docRef, dataToSave)
+    // merge: andere Masse aus Messen 1-3 bleiben erhalten
+    await setDoc(docRef, dataToSave, { merge: true })
     statusMessage.value = 'Gespeichert!'
   } catch (e) {
     console.error(e)
@@ -257,11 +275,24 @@ const saveToFirebase = async () => {
   }
 }
 
+const currentUser = ref(null)
+let stopAuthListener = null
+
 onMounted(() => {
-  loadSizesFromFirebase()
+  // Erst laden, wenn Firebase weiss, wer eingeloggt ist
+  stopAuthListener = onAuthStateChanged(auth, (user) => {
+    currentUser.value = user
+    if (user) {
+      loadSizesFromFirebase(user.uid)
+    } else {
+      statusMessage.value = 'Du bist nicht angemeldet. Es werden Standardmasse verwendet.'
+    }
+  })
 })
 
-const currentUser = ref(null)
+onUnmounted(() => {
+  if (stopAuthListener) stopAuthListener()
+})
 
 const firstName = computed(() => {
   if (!currentUser.value || !currentUser.value.displayName) return 'Miau'
@@ -470,7 +501,8 @@ const downloadA4PDF = async () => {
               <input 
                 type="number" 
                 :id="item.id" 
-                v-model.number="item.value" 
+                v-model.number="item.value"
+                :placeholder="item.default"
                 step="0.5"
               />
               <span>{{ item.unit }}</span>
