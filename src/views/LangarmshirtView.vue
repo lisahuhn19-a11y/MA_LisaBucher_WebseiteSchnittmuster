@@ -24,9 +24,7 @@ const getVal = (id) => {
   return calcItem ? Number(calcItem.value) || 0 : 0
 }
 
-//gemessene Masse (gleiche Kürzel wie in Messen 1-3, damit sie aus Firebase geladen werden können)
-//value: Eingabe der Person (leer, solange nichts gespeichert/eingegeben ist)
-//default: Standardwert aus Grösse M (Messen 1-3), wird verwendet, wenn das Feld leer ist
+// gemessene Masse aus Datenbank oder sonst Standartwert
 const measurements = ref([
   { id: 'MoL', label: 'Modelllänge', value: null, default: 50, unit: 'cm' },
   { id: 'KoeH', label: 'Körperhöhe', value: null, default: 168, unit: 'cm' },
@@ -48,28 +46,73 @@ const measurements = ref([
   { id: 'HlB',  label: 'Halslochbreite', value: null, default: 6.5, unit: 'cm' }
 ])
 
-//Masse für die Schnittkonstruktion, aus den gemessenen Massen umgerechnet
-//TODO: Formeln sind Platzhalter und müssen noch angepasst werden
+// korrigierte Masse nach Messung
 const measurementsConstruction = computed(() => [
-  {id: 'RueL', value: getVal('gRueL')/2},
-  {id: 'BrT', value: getVal('gBrT')/2},
-  {id: 'VL', value: getVal('gVL')/2},
-  {id: 'ArD', value: getVal('gArD')/2},
+  {id: 'RueL', value: getVal('gRueL')},
+  {id: 'BrT', value: getVal('gBrT')-getVal('HlB')},
+  {id: 'VL', value: getVal('gVL')-getVal('HlB')},
+  {id: 'ArD', value: getVal('gArD')},
   {id: 'BrPa', value: getVal('BrPA')},
   {id: 'HgU', value: getVal('HagU')}
 ])
 
-//berechntete Masse
+//Hilfsmasse
 const measurementsCalc = computed(() => [
   {id: 'AlT+', value: getVal('AlT')+0.5},
   {id: 'BrW', value: getVal('BrU')+8},
   {id: 'SuNL', value: getVal('SuB')+1.5},
   {id: 'SuWi+', value: (getVal('SuWi')*Math.PI)/180},
   {id: 'AESaW', value: getVal('HgU')+6},
-  {id: 'ArD+', value: getVal('ArD')+1.5}
+  {id: 'ArD+', value: getVal('ArD')+1.5},
+  {id: 'OaW', value: getVal('OaU')}
 ])
 
 const statusMessage = ref('')
+
+//Ärmelpunkt (Äp)
+const aepPunkt = () => {
+  const p7x = getVal('BrW')/4 - getVal('ArD+')/2
+  const p7y = getVal('AlT+')
+  return { x: p7x, y: p7y - (p7y - getVal('HlB')/3)/4 }
+}
+
+//untere Armlochkurve: P6 → ÄP (nur Rumpf)
+const armlochUnten = () => {
+  const p6x = getVal('BrW')/4
+  const p7y = getVal('AlT+')
+  const aep = aepPunkt()
+  const k = 0.55
+  return `C ${p6x - k*(p6x-aep.x)} ${p7y}, ${aep.x} ${aep.y + k*(p7y-aep.y)}, ${aep.x} ${aep.y}`
+}
+
+//obere Armlochkurve: ÄP → Schulterpunkt (Rumpf und Ärmel)
+const armlochOben = (Sx, Sy) => {
+  const w = getVal('SuWi+')
+  const aep = aepPunkt()
+  const t = (aep.y - Sy)/3
+  return `C ${aep.x} ${aep.y - t}, ${Sx - t*Math.sin(w)} ${Sy + t*Math.cos(w)}, ${Sx} ${Sy}`
+}
+
+//Punkt auf einer kubischen Kurve bei t (0 bis 1)
+const bezierPunkt = (p0, p1, p2, p3, t) => {
+  const u = 1 - t
+  return {
+    x: u*u*u*p0.x + 3*u*u*t*p1.x + 3*u*t*t*p2.x + t*t*t*p3.x,
+    y: u*u*u*p0.y + 3*u*u*t*p1.y + 3*u*t*t*p2.y + t*t*t*p3.y
+  }
+}
+
+//Länge einer Kurve: in 100 kleine gerade Stücke teilen und zusammenzählen
+const bezierLaenge = (p0, p1, p2, p3) => {
+  let laenge = 0
+  let vorher = p0
+  for (let i = 1; i <= 100; i++) {
+    const p = bezierPunkt(p0, p1, p2, p3, i/100)
+    laenge += Math.sqrt((p.x-vorher.x)**2 + (p.y-vorher.y)**2)
+    vorher = p
+  }
+  return laenge
+}
 
 // SVG's für die einzelnen Schnittteile
 const vorderTeil = computed(() => {
@@ -100,19 +143,7 @@ const vorderTeil = computed(() => {
   const p12x = p6x - 1
   const p12y = p3y
 
-  const p98x = p7x + 1
-  const p98y = getVal('AlT+')*0.75
-
-  const p99x = p7x
-  const p99y = p7y - getVal('AlT+')/2
-
-  const kpp99x = 2*p99x - 0.5*p8vx - 0.5*p98x
-  const kpp99y = 2*p99y - 0.5*p8vy - 0.5*p98y
-
-  const kpp7x = p7x*1.1
-  const kpp7y = p7y - (p7y - p98y)*0.3
-
-  return `M ${p11x} ${p11y} L ${p3x} ${p3y} L ${p12x} ${p12y} C ${p12x} ${p12y}, ${p12x} ${p5y}, ${p6x} ${p6y} Q ${kpp7x} ${kpp7y}, ${p98x} ${p98y} C ${p98x} ${p98y}, ${kpp99x} ${kpp99y}, ${p8vx} ${p8vy} L ${p10vx} ${p10vy} C ${p10vx} ${p10vy}, ${p10vx} ${p11y}, ${p11x} ${p11y}`
+  return `M ${p11x} ${p11y} L ${p3x} ${p3y} L ${p12x} ${p12y} C ${p12x} ${p12y}, ${p12x} ${p5y}, ${p6x} ${p6y} ${armlochUnten()} ${armlochOben(p8vx, p8vy)} L ${p10vx} ${p10vy} C ${p10vx} ${p10vy}, ${p10vx} ${p11y}, ${p11x} ${p11y}`
 })
 
 const hinterTeil = computed(() => {
@@ -147,23 +178,8 @@ const hinterTeil = computed(() => {
   const p12x = p6x - 1
   const p12y = p3y
 
-  const p98x = p7x + 1
-  const p98y = getVal('AlT+')*0.75
-
-  const p99x = p7x
-  const p99y = p7y - getVal('AlT+')/2
-
-  const kpp99x = 2*p99x - 0.5*p8x - 0.5*p98x
-  const kpp99y = 2*p99y - 0.5*p8y - 0.5*p98y
-
-  const kpp6x = p6x
-  const kpp6y = p6y - (p7y - p98y)*0.3
-
-  const kpp7x = p7x*1.1
-  const kpp7y = p7y - (p7y - p98y)*0.3
-
   //return `M ${p2x} ${p2y} L ${p3x} ${p3y} L ${p12x} ${p12y} C ${p12x} ${p12y}, ${p12x} ${p5y}, ${p6x} ${p6y} C ${p6x} ${p6y}, ${p7x} ${p7y}, ${p8hx} ${p8hy} L ${p10hx} ${p10hy} C ${p10hx} ${p10hy}, ${p10hx} ${p2y}, ${p2x} ${p2y}`
-  return `M ${p2x} ${p2y} L ${p3x} ${p3y} L ${p12x} ${p12y} C ${p12x} ${p12y}, ${p12x} ${p5y}, ${p6x} ${p6y} Q ${kpp7x} ${kpp7y}, ${p98x} ${p98y} C ${p98x} ${p98y}, ${kpp99x} ${kpp99y}, ${p8x} ${p8y} L ${p8hx} ${p8hy} L ${p10hx} ${p10hy} C ${p10hx} ${p10hy}, ${p10hx} ${p2y}, ${p2x} ${p2y}`
+  return `M ${p2x} ${p2y} L ${p3x} ${p3y} L ${p12x} ${p12y} C ${p12x} ${p12y}, ${p12x} ${p5y}, ${p6x} ${p6y} ${armlochUnten()} ${armlochOben(p8x, p8y)} L ${p8hx} ${p8hy} L ${p10hx} ${p10hy} C ${p10hx} ${p10hy}, ${p10hx} ${p2y}, ${p2x} ${p2y}`
 
 })
 
@@ -186,40 +202,68 @@ const aermel = computed(() => {
   const p8x = p9x + getVal('SuNL')*Math.cos(getVal('SuWi+'))
   const p8y = p9y + getVal('SuNL')*Math.sin(getVal('SuWi+'))
 
-  const p98x = p7x + 1
-  const p98y = getVal('AlT+')*0.75
+  const aep = aepPunkt()
 
-  const p99x = p7x
-  const p99y = p7y - getVal('AlT+')/2
+  //P13: Schulterlinie um die Armlänge verlängern
+  const p13x = p8x + Math.cos(getVal('SuWi+'))*getVal('ArL')
+  const p13y = p8y + Math.sin(getVal('SuWi+'))*getVal('ArL')
 
-  const kpp99x = 2*p99x - 0.5*p8x - 0.5*p98x
-  const kpp99y = 2*p99y - 0.5*p8y - 0.5*p98y
+  //P14: Ärmelmitte 2 cm tiefer stellen (rechtwinklig zur Schulterlinie)
+  const p14x = p13x - 2*Math.sin(getVal('SuWi+'))
+  const p14y = p13y + 2*Math.cos(getVal('SuWi+'))
 
-  const kpp6x = p6x
-  const kpp6y = p6y - (p7y - p98y)*0.3
+  //Winkel der neuen Ärmelmitte P8 → P14
+  const aeWi = Math.atan2(p14y-p8y, p14x-p8x)
 
-  const kpp7x = p7x*1.1
-  const kpp7y = p7y - (p7y - p98y)*0.3
+  //P15: ½ Ärmelsaumweite rechtwinklig zur Ärmelmitte abtragen
+  const p15x = p14x - getVal('AESaW')/2*Math.sin(aeWi)
+  const p15y = p14y + getVal('AESaW')/2*Math.cos(aeWi)
 
-  const p14x = p8x + Math.cos(getVal('SuWi+'))*getVal('ArL')
-  const p14y = p8y + Math.sin(getVal('SuWi+'))*getVal('ArL')
+  //Kreisbogen um ÄP durch P6, darauf ab P6 ½ ArD+ - 1 cm abtragen → P16
+  const x = Math.sqrt((p6x-aep.x)**2 + (p6y-aep.y)**2)
 
-  const p15x = p14x - getVal('AESaW')/2*Math.sin(getVal('SuWi+'))
-  const p15y = p14y + getVal('AESaW')/2*Math.cos(getVal('SuWi+'))
+  const alpha = 2*Math.asin(Math.min(1, (0.5*getVal('ArD+')-1)/(2*x)))
+  const beta = Math.atan2(p6y-aep.y, p6x-aep.x)
+  const gamma = beta + alpha   //Richtung Körpermitte drehen
 
-  const p17x = 0
-  const p17y =0
+  const p16x = aep.x + Math.cos(gamma) * x
+  const p16y = aep.y + Math.sin(gamma) * x
 
-  const x = Math.abs(Math.sqrt((Math.abs(p6x-p98x))**2 + (Math.abs(p6y-p98y))**2 ))
+  //Länge der unteren Rumpfkurve (ÄP bis P6), gleiche Kontrollpunkte wie armlochUnten
+  const k = 0.55
+  const laengeRumpf = bezierLaenge(
+    {x: p6x, y: p6y}, {x: p6x - k*(p6x-aep.x), y: p6y},
+    {x: aep.x, y: aep.y + k*(p6y-aep.y)}, aep)
 
-  const alpha = 2*Math.asin((0.5*getVal('ArD+')-1)/(2*x))
-  const beta = (Math.asin((p6y-p98y)/(p6x-p98x)))
-  const gamma = (90*Math.PI/180) - (alpha + beta)
+  //Senkrechte zur Ärmelmitte, Richtung Unterarm
+  const nx = -Math.sin(aeWi)
+  const ny = Math.cos(aeWi)
 
-  const p16x = p98x + Math.cos(gamma) * (0.5*getVal('ArD+')-1)
-  const p16y = p98y + Math.sin(gamma) * (0.5*getVal('ArD+')-1)
+  //Richtung ÄP → P17: zwischen senkrecht und der Senkrechten zur Ärmelmitte
+  const rl = Math.sqrt((nx/2)**2 + ((1+ny)/2)**2)
+  const rx = (nx/2)/rl
+  const ry = ((1+ny)/2)/rl
 
-  return `M ${p98x} ${p98y} C ${p98x} ${p98y}, ${kpp99x} ${kpp99y}, ${p8x} ${p8y} L ${p14x} ${p14y} L ${p15x} ${p15y} L ${p16x} ${p16y}`
+  //Ärmelkurve ÄP → P17 (hohler Teil der S-Form): senkrecht weg vom ÄP,
+  //kommt bei P17 rechtwinklig zur Ärmelmitte an
+  //P17 so weit setzen, bis die Ärmelkurve gleich lang ist wie die Rumpfkurve
+  let d = laengeRumpf
+  let p17x, p17y, kp1y, kp2x, kp2y
+  for (let i = 0; i < 10; i++) {
+    p17x = aep.x + d*rx
+    p17y = aep.y + d*ry
+    kp1y = aep.y + d/3
+    kp2x = p17x - d/3*nx
+    kp2y = p17y - d/3*ny
+    d = d * laengeRumpf / bezierLaenge(aep, {x: aep.x, y: kp1y}, {x: kp2x, y: kp2y}, {x: p17x, y: p17y})
+  }
+
+  //P19: bei ¼ der Ärmelmitte ½ Oberarmweite abwinkeln (Kontrollpunkt für die Ärmelnaht)
+  const aeMitteL = Math.sqrt((p14x-p8x)**2 + (p14y-p8y)**2)
+  const p19x = p8x + aeMitteL/4*Math.cos(aeWi) + getVal('OaW')/2*nx
+  const p19y = p8y + aeMitteL/4*Math.sin(aeWi) + getVal('OaW')/2*ny
+
+  return `M ${aep.x} ${aep.y} ${armlochOben(p8x, p8y)} L ${p14x} ${p14y} L ${p15x} ${p15y} Q ${p19x} ${p19y}, ${p17x} ${p17y} C ${kp2x} ${kp2y}, ${aep.x} ${kp1y}, ${aep.x} ${aep.y} Z`
 
 })
 
