@@ -1,6 +1,17 @@
 <!-- src/views/StartseiteView.vue -->
 <script setup>
+import { ref, onMounted } from 'vue'
+import { auth } from '@/firebase'
+import { onAuthStateChanged } from 'firebase/auth'
 import logo from '../assets/Logos/LogoMiauMass.svg'
+
+const currentUser = ref(null)
+
+onMounted(() => {
+  onAuthStateChanged(auth, (user) => {
+    currentUser.value = user
+  })
+})
 </script>
 
 <template>
@@ -16,10 +27,10 @@ import logo from '../assets/Logos/LogoMiauMass.svg'
       <h2>Wie funktioniert es?</h2>      
     </div>
     
-    <p>1. Erfasse deine Masse -> 2. Suche dein Schnittmuster aus -> 3. Lade das PDF herunter und drucke es aus -> 4. bereit zum nähen</p>
+    <p>1. <RouterLink to="/messen2">Erfasse deine Masse</RouterLink> -> 2. <RouterLink to="/schnittmuster">Suche dein Schnittmuster aus</RouterLink> -> 3. <RouterLink to="/langarmshirt">lade das PDF herunter und drucke es aus</RouterLink> -> 4. bereit zum nähen</p>
 
     <div v-if="!currentUser">
-      <p>Registriere dich <RouterLink to="/registrieren">hier</RouterLink> an, um deine Masse zu speichern.</p>
+      <p>Registriere dich <RouterLink to="/registrieren">hier</RouterLink>, um deine Masse zu speichern.</p>
     </div>
 
     <h2>Häufig gestellte Fragen</h2>
