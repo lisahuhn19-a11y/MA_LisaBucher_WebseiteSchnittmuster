@@ -1,6 +1,6 @@
 <!-- src/views/StartseiteView.vue -->
 <script setup>
-import logo from '../assets/LogoMiauMass.svg'
+import logo from '../assets/Logos/LogoMiauMass.svg'
 </script>
 
 <template>

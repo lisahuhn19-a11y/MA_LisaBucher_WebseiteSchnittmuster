@@ -1,7 +1,7 @@
 <!-- src/App.vue -->
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
-import logo from './assets/MLogoMiauMass.svg'
+import logo from './assets/Logos/MLogoMiauMass.svg'
 </script>
 
 <template>

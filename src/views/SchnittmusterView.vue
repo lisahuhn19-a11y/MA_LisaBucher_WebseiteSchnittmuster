@@ -1,9 +1,9 @@
 <!-- src/views/StartseiteView.vue -->
 <script setup>
-import langarmshirtFoto1 from '@/assets/LangarmshirtFoto1.jpg'
-import massstab from '@/assets/Massstab.svg'
-import stern from '@/assets/Stern.svg'
-import stoffrolle from '@/assets/Stoffrolle.svg'
+import langarmshirtFoto1 from '@/assets/FotosLangarmshirt/LangarmshirtFoto1.jpg'
+import massstab from '@/assets/IconsAlleSchnittmuster/Massstab.svg'
+import stern from '@/assets/IconsAlleSchnittmuster/Stern.svg'
+import stoffrolle from '@/assets/IconsAlleSchnittmuster/Stoffrolle.svg'
 
 // Liste aller Schnittmuster: für ein neues Schnittmuster einfach einen Eintrag hinzufügen
 const schnittmuster = [

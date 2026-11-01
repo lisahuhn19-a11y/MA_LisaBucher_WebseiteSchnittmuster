@@ -6,8 +6,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import {jsPDF} from 'jspdf'
 import 'svg2pdf.js'
-import logoGross from '@/assets/MMLogoMiauMass.svg'
-import logoKleinRaw from '@/assets/MLogoMiauMass.svg?raw'
+import logoGross from '@/assets/Logos/MMLogoMiauMass.svg'
+import logoKleinRaw from '@/assets/Logos/MLogoMiauMass.svg?raw'
 
 // Inhalt vom kleinen Logo ohne äusseres <svg>-Tag, damit es direkt in die Schnittteile eingefügt werden kann
 const logoKleinInhalt = logoKleinRaw.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '')
