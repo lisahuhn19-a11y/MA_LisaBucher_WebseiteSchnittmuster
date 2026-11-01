@@ -6,6 +6,11 @@ import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { onAuthStateChanged } from 'firebase/auth'
 import {jsPDF} from 'jspdf'
 import 'svg2pdf.js'
+import logoGross from '@/assets/MMLogoMiauMass.svg'
+import logoKleinRaw from '@/assets/MLogoMiauMass.svg?raw'
+
+// Inhalt vom kleinen Logo ohne äusseres <svg>-Tag, damit es direkt in die Schnittteile eingefügt werden kann
+const logoKleinInhalt = logoKleinRaw.replace(/^[\s\S]*?<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '')
 
 const getVal = (id) => {
   const item = measurements.value.find(m => m.id === id)
@@ -371,43 +376,293 @@ const svgDimensions = computed(() => {
   }
 })
 
+//Ärmelmitte P8 → P14 (Bruchkante vom Ärmel), gleiche Formeln wie beim Ärmel
+const aermelMitte = computed(() => {
+  const w = getVal('SuWi+')
+  const p8x = getVal('HlB')+0.5 + getVal('SuNL')*Math.cos(w)
+  const p8y = getVal('SuNL')*Math.sin(w)
+  const p13x = p8x + Math.cos(w)*getVal('ArL')
+  const p13y = p8y + Math.sin(w)*getVal('ArL')
+  const p14x = p13x - 2*Math.sin(w)
+  const p14y = p13y + 2*Math.cos(w)
+  return { p8: {x: p8x, y: p8y}, p14: {x: p14x, y: p14y}, winkel: Math.atan2(p14y-p8y, p14x-p8x) }
+})
+
+//Drehung vom Ärmel in Grad, damit die Ärmelmitte senkrecht steht
+const aermelDrehung = computed(() => 90 - aermelMitte.value.winkel*180/Math.PI)
+
+//Punkt um (0,0) drehen (Winkel in Grad, gleich wie rotate() im SVG)
+const drehe = (p, grad) => {
+  const w = grad*Math.PI/180
+  return { x: p.x*Math.cos(w) - p.y*Math.sin(w), y: p.x*Math.sin(w) + p.y*Math.cos(w) }
+}
+
+//alle Punkte aus einem Pfad (M, L, C, Q und Z haben nur x/y-Paare)
+const pfadPunkte = (d) => {
+  const zahlen = d.match(/-?(\d*\.)?\d+(e[-+]?\d+)?|NaN|-?Infinity/gi) || []
+  const punkte = []
+  for (let i = 0; i + 1 < zahlen.length; i += 2) {
+    const x = Number(zahlen[i])
+    const y = Number(zahlen[i+1])
+    if (Number.isFinite(x) && Number.isFinite(y)) punkte.push({x, y})
+  }
+  return punkte
+}
+
+//Rechteck um alle Punkte (mit Kontrollpunkten, darum eher etwas zu gross)
+const rahmenVon = (punkte) => {
+  if (punkte.length === 0) return { minX: 0, minY: 0, maxX: 0, maxY: 0 }
+  return {
+    minX: Math.min(...punkte.map(p => p.x)),
+    minY: Math.min(...punkte.map(p => p.y)),
+    maxX: Math.max(...punkte.map(p => p.x)),
+    maxY: Math.max(...punkte.map(p => p.y))
+  }
+}
+
+//Anordnung der Teile im PDF (in cm), oben links beginnend
+const exportLayout = computed(() => {
+  const abstand = 2       //zwischen den Teilen
+  const rand = 1          //zum Rand vom Bogen
+  const unterQuadrat = 13 //Vorder- und Rückenteil beginnen unter dem Kontrollquadrat auf A1
+
+  const rV = rahmenVon(pfadPunkte(vorderTeil.value))
+  const rH = rahmenVon(pfadPunkte(hinterTeil.value))
+  const rA = rahmenVon(pfadPunkte(aermel.value).map(p => drehe(p, aermelDrehung.value)))
+
+  const vorder = { x: rand - rV.minX, y: unterQuadrat - rV.minY, rahmen: rV }
+  const hinter = { x: vorder.x + rV.maxX + abstand - rH.minX, y: unterQuadrat - rH.minY, rahmen: rH }
+  const aermelTeil = { x: hinter.x + rH.maxX + abstand - rA.minX, y: rand - rA.minY, rahmen: rA }
+
+  //Rahmen der Teile auf dem ganzen Bogen in mm
+  const rahmenMm = [vorder, hinter, aermelTeil].map(t => ({
+    minX: (t.x + t.rahmen.minX)*10,
+    minY: (t.y + t.rahmen.minY)*10,
+    maxX: (t.x + t.rahmen.maxX)*10,
+    maxY: (t.y + t.rahmen.maxY)*10
+  }))
+
+  return {
+    vorder,
+    hinter,
+    aermel: aermelTeil,
+    rahmenMm,
+    totalW: Math.ceil(Math.max(...rahmenMm.map(r => r.maxX)) + rand*10),
+    totalH: Math.ceil(Math.max(...rahmenMm.map(r => r.maxY)) + rand*10)
+  }
+})
+
+//Fadenlauf: senkrechter Doppelpfeil
+const fadenlaufPfad = (x, y1, y2) =>
+  `M ${x} ${y1} L ${x} ${y2} M ${x-0.4} ${y1+0.8} L ${x} ${y1} L ${x+0.4} ${y1+0.8} M ${x-0.4} ${y2-0.8} L ${x} ${y2} L ${x+0.4} ${y2-0.8}`
+
+//Bruchkante: Linie neben der Kante mit zwei Pfeilen zur Kante
+//richtung: 1 = Teil liegt rechts von der Kante, -1 = Teil liegt links
+const bruchPfad = (x, y1, y2, richtung) => {
+  const a = x + 2*richtung
+  const s = 0.6*richtung
+  return `M ${x} ${y1} L ${a} ${y1} L ${a} ${y2} L ${x} ${y2} M ${x+s} ${y1-0.3} L ${x} ${y1} L ${x+s} ${y1+0.3} M ${x+s} ${y2-0.3} L ${x} ${y2} L ${x+s} ${y2+0.3}`
+}
+
+//Position von Logo, Beschriftung, Fadenlauf und Bruchkante auf den Teilen (in cm, im Teil)
+const exportDeko = computed(() => {
+  const teilDeko = (rahmen, textX, bruchX, bruchOben, bruchUnten, richtung) => {
+    const hoehe = rahmen.maxY - rahmen.minY
+    const textY = rahmen.minY + hoehe*0.22
+    const bruchL = bruchUnten - bruchOben
+    return {
+      logo: `translate(${textX - 1}, ${textY - 3.6}) scale(${2/33})`,
+      textX,
+      textY,
+      fadenlauf: fadenlaufPfad(textX, rahmen.minY + hoehe*0.45, rahmen.minY + hoehe*0.85),
+      bruch: bruchPfad(bruchX, bruchOben + bruchL*0.15, bruchUnten - bruchL*0.15, richtung),
+      bruchTextX: bruchX + 2.9*richtung,
+      bruchTextY: (bruchOben + bruchUnten)/2
+    }
+  }
+
+  const rV = exportLayout.value.vorder.rahmen
+  const rH = exportLayout.value.hinter.rahmen
+  const rA = exportLayout.value.aermel.rahmen
+  const oben = drehe(aermelMitte.value.p8, aermelDrehung.value)
+  const unten = drehe(aermelMitte.value.p14, aermelDrehung.value)
+  //Ärmel: Beschriftung in der Mitte der Saumweite, dort ist der Ärmel am schmalsten
+  const aermelTextX = oben.x - getVal('AESaW')/4
+
+  return {
+    vorder: teilDeko(rV, (rV.minX + rV.maxX)/2, 0, getVal('HlB') + 2.5, getVal('MoL'), 1),
+    hinter: teilDeko(rH, (rH.minX + rH.maxX)/2, 0, getVal('HlB')/3, getVal('MoL'), 1),
+    aermel: teilDeko(rA, aermelTextX, oben.x, oben.y, unten.y, -1)
+  }
+})
+
+//SVG-Datei als PNG laden (das grosse Logo enthält ein Bild, so wird es zuverlässig ins PDF übernommen)
+const svgAlsPng = (url, breitePx) => new Promise((resolve, reject) => {
+  const img = new Image()
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = breitePx
+    canvas.height = Math.round(breitePx * img.height / img.width)
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+    resolve({ daten: canvas.toDataURL('image/png'), verhaeltnis: canvas.height / canvas.width })
+  }
+  img.onerror = reject
+  img.src = url
+})
+
 const downloadA4PDF = async () => {
+  const svgElement = document.querySelector('.pattern-svg-export')
+  if (!svgElement) return
+
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4'
   })
 
-  const svgElement = document.querySelector('.pattern-svg-export')
-  if (!svgElement) return
-
-  const a4Width = 190
+  const rand = 10       //Rand auf dem Blatt
+  const a4Width = 190   //Ausschnitt pro Seite
   const a4Height = 277
+  const layout = exportLayout.value
+  const ganzerBogen = `0 0 ${layout.totalW} ${layout.totalH}`
 
-  const totalWidth = Math.min((svgDimensions.value.xAermel + 150) * 10, 1500)
-  const totalHeight = Math.min((svgDimensions.value.height + 50) * 10, 1200)
+  const spalten = Math.ceil(layout.totalW / a4Width)
+  const reihen = Math.ceil(layout.totalH / a4Height)
+  const seitenName = (spalte, reihe) => String.fromCharCode(65 + spalte) + (reihe + 1)
 
-  let isFirstPage = true
+  //Seite nur drucken, wenn der Rahmen von einem Teil darauf liegt (A1 immer wegen Kontrollquadrat)
+  //Die Rahmen sind Rechtecke, darum liegt jedes Teil auf lückenlos zusammenhängenden Seiten
+  const seiteNoetig = (spalte, reihe) => {
+    if (spalte === 0 && reihe === 0) return true
+    const x0 = spalte*a4Width
+    const y0 = reihe*a4Height
+    return layout.rahmenMm.some(r => r.minX < x0 + a4Width && r.maxX > x0 && r.minY < y0 + a4Height && r.maxY > y0)
+  }
 
-  for (let y=0; y < totalHeight; y+= a4Height) {
-    for (let x=0; x < totalWidth; x+= a4Width) {
-      if (!isFirstPage) {
-        pdf.addPage('a4', 'portrait')
+  // ---------- Titelseite ----------
+  try {
+    const logo = await svgAlsPng(logoGross, 600)
+    const logoBreite = 50
+    pdf.addImage(logo.daten, 'PNG', (210 - logoBreite)/2, 15, logoBreite, logoBreite*logo.verhaeltnis)
+  } catch (e) {
+    console.error('Logo konnte nicht geladen werden', e)
+  }
+
+  pdf.setTextColor(0)
+  pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(24)
+  pdf.text(`Langarmshirt für ${firstName.value}`, 105, 58, { align: 'center' })
+  pdf.setFont('helvetica', 'normal')
+  pdf.setFontSize(14)
+  pdf.text('by MiauMass', 105, 66, { align: 'center' })
+
+  pdf.setFontSize(10)
+  const hinweise = [
+    '- In tatsächlicher Grösse (100 %) drucken, nicht "An Seite anpassen". Mit dem Kontrollquadrat auf Seite A1 prüfen.',
+    '- Die Kreuze markieren die Ecken jeder Seite. Seiten nach dem Klebeplan so aneinanderlegen, dass die Kreuze genau aufeinanderpassen, und zusammenkleben.',
+    '- Die Schnittteile enthalten noch keine Nahtzugabe.'
+  ]
+  let textY = 78
+  hinweise.forEach(h => {
+    const zeilen = pdf.splitTextToSize(h, 170)
+    pdf.text(zeilen, 20, textY)
+    textY += zeilen.length * 5
+  })
+
+  //Klebeplan: verkleinerter Bogen mit Seitenraster
+  pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(12)
+  pdf.text('Klebeplan', 20, textY + 5)
+  const planY = textY + 9
+  const massstab = Math.min(170 / (spalten*a4Width), 120 / (reihen*a4Height))
+  const planX = (210 - spalten*a4Width*massstab) / 2
+
+  svgElement.setAttribute('viewBox', ganzerBogen)
+  await pdf.svg(svgElement, {
+    x: planX,
+    y: planY,
+    width: layout.totalW*massstab,
+    height: layout.totalH*massstab
+  })
+
+  pdf.setDrawColor(0)
+  pdf.setLineWidth(0.2)
+  pdf.setTextColor(0)
+  pdf.setFont('helvetica', 'normal')
+  pdf.setFontSize(8)
+  for (let reihe = 0; reihe < reihen; reihe++) {
+    for (let spalte = 0; spalte < spalten; spalte++) {
+      const x = planX + spalte*a4Width*massstab
+      const y = planY + reihe*a4Height*massstab
+      if (seiteNoetig(spalte, reihe)) {
+        pdf.setLineDashPattern([], 0)
+        pdf.rect(x, y, a4Width*massstab, a4Height*massstab)
+        pdf.text(seitenName(spalte, reihe), x + 1, y + 3.5)
+      } else {
+        //weggelassene Seite gestrichelt
+        pdf.setLineDashPattern([1, 1], 0)
+        pdf.rect(x, y, a4Width*massstab, a4Height*massstab)
       }
-      isFirstPage = false
+    }
+  }
+  pdf.setLineDashPattern([], 0)
 
-      svgElement.setAttribute('viewBox', `${x} ${y} ${a4Width} ${a4Height}`)
+  //Zuschnitt
+  let zuschnittY = planY + reihen*a4Height*massstab + 10
+  pdf.setFont('helvetica', 'bold')
+  pdf.setFontSize(12)
+  pdf.text('Zuschnitt', 20, zuschnittY)
+  pdf.setFont('helvetica', 'normal')
+  pdf.setFontSize(10)
+  ;['Vorderteil - 1x im Stoffbruch', 'Rückenteil - 1x im Stoffbruch', 'Ärmel - 2x im Stoffbruch'].forEach(zeile => {
+    zuschnittY += 5.5
+    pdf.text(zeile, 20, zuschnittY)
+  })
+
+  // ---------- Schnittseiten ----------
+  for (let reihe = 0; reihe < reihen; reihe++) {
+    for (let spalte = 0; spalte < spalten; spalte++) {
+      if (!seiteNoetig(spalte, reihe)) continue
+      pdf.addPage('a4', 'portrait')
+
+      svgElement.setAttribute('viewBox', `${spalte*a4Width} ${reihe*a4Height} ${a4Width} ${a4Height}`)
 
       await pdf.svg(svgElement, {
-        x: 10,
-        y:10,
+        x: rand,
+        y: rand,
         width: a4Width,
         height: a4Height
       })
+
+      //Klebemarken: Mitte vom Kreuz genau auf den Ecken vom Ausschnitt
+      pdf.setDrawColor(0)
+      pdf.setLineWidth(0.2)
+      const ecken = [[rand, rand], [rand + a4Width, rand], [rand, rand + a4Height], [rand + a4Width, rand + a4Height]]
+      ecken.forEach(([x, y]) => {
+        pdf.line(x - 5, y, x + 5, y)
+        pdf.line(x, y - 5, x, y + 5)
+      })
+
+      //Seitenname klein unten rechts im Rand
+      pdf.setTextColor(0)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(9)
+      pdf.text(seitenName(spalte, reihe), rand + a4Width - 8, rand + a4Height + 6, { align: 'right' })
+
+      //Kontrollquadrat 10 x 10 cm auf A1
+      if (spalte === 0 && reihe === 0) {
+        pdf.setLineWidth(0.3)
+        pdf.rect(rand + 10, rand + 10, 100, 100)
+        pdf.setFontSize(12)
+        pdf.text('Kontrollquadrat', rand + 60, rand + 55, { align: 'center' })
+        pdf.text('10 x 10 cm', rand + 60, rand + 62, { align: 'center' })
+        pdf.setFontSize(8)
+        pdf.text('Wenn das Quadrat nicht genau 10 cm misst, wurde beim Drucken skaliert.', rand + 60, rand + 70, { align: 'center', maxWidth: 90 })
+      }
     }
   }
 
-  svgElement.setAttribute('viewBox', '0 0 500 700')
+  svgElement.setAttribute('viewBox', ganzerBogen)
   pdf.save('schnittmusterLangarmshirt.pdf')
 }
 
@@ -452,7 +707,7 @@ const downloadA4PDF = async () => {
           <!-- SVG's für Schnittteile -->
           <g :transform="`translate(${svgDimensions.xVorder}, ${svgDimensions.yPos})`">
             <g clip-path="url(#clip-vorder)" stroke="black" stroke-width="0.3" opacity="0.4">
-              <line v-for="i in 50" :key="'v'+1" :x1="-100 + i*15" y1="-50" :x2="i+15" y2="300" /> 
+              <line v-for="i in 50" :key="'v'+i" :x1="-100 + i*15" y1="-50" :x2="i*15" y2="300" />
             </g>
             <path :d="vorderTeil" stroke="#4f46e5" stroke-width="0.5" fill="none" />
             <text x="10" y="20" font-size="11" fill="#4f46e5">Vorderteil</text>
@@ -467,7 +722,7 @@ const downloadA4PDF = async () => {
             <text x="10" y="20" font-size="11" fill="#10b981">Rückenteil</text>
           </g>
 
-          <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos}) rotate(90)})`">
+          <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos}) rotate(${aermelDrehung})`">
             <g clip-path="url(#clip-aermel)" stroke="black" stroke-width="0.3" opacity="0.3">
               <line v-for="i in 50" :key="'a'+i" :x1="i*10" y1="-50" :x2="i*10" y2="300" />
             </g>
@@ -481,7 +736,7 @@ const downloadA4PDF = async () => {
         <!-- Für das unsichtbare Export-SVG -->
 
         <!-- SVGs für Schnittteile -->
-        <svg :viewBox="'0 0 ' + (svgDimensions.width * 10) + ' ' + (svgDimensions.height * 10)" class="pattern-svg-export">
+        <svg :viewBox="'0 0 ' + exportLayout.totalW + ' ' + exportLayout.totalH" class="pattern-svg-export">
           <rect width="100%" height="100%" fill="white" />
           <!-- Muster für Füllung -->
           <defs>
@@ -497,40 +752,59 @@ const downloadA4PDF = async () => {
           </defs>
 
           <g transform="scale(10)">
-            <g :transform="`translate(${svgDimensions.xVorder}, ${svgDimensions.yPos})`">
+            <g :transform="`translate(${exportLayout.vorder.x}, ${exportLayout.vorder.y})`">
               <g clip-path="url(#clip-vorder-pdf)" stroke="red" stroke-width="0.15" opacity="0.4">
                 <line v-for="i in 800" :key="'vp'+i" :x1="-200 + i*1.5" y1="-100" :x2="i*1.5" y2="500" />
-              </g>"
+              </g>
               <path :d="vorderTeil" stroke="black" stroke-width="0.05" fill="none" />
-              <text x="10" y="15" font-size="1" fill="black">Vorderteil {{ firstName }}</text>
+              <!-- Bruchkante und Fadenlauf -->
+              <path :d="exportDeko.vorder.bruch" stroke="black" stroke-width="0.05" fill="none" />
+              <text :transform="`translate(${exportDeko.vorder.bruchTextX}, ${exportDeko.vorder.bruchTextY}) rotate(-90)`" text-anchor="middle" font-size="0.6" fill="black">Stoffbruch</text>
+              <path :d="exportDeko.vorder.fadenlauf" stroke="black" stroke-width="0.05" fill="none" />
+              <!-- Logo und Beschriftung -->
+              <g :transform="exportDeko.vorder.logo" v-html="logoKleinInhalt"></g>
+              <text :x="exportDeko.vorder.textX" :y="exportDeko.vorder.textY" text-anchor="middle" font-size="1.2" fill="black">Vorderteil</text>
+              <text :x="exportDeko.vorder.textX" :y="exportDeko.vorder.textY + 1.2" text-anchor="middle" font-size="0.7" fill="black">1x im Stoffbruch</text>
+              <text :x="exportDeko.vorder.textX" :y="exportDeko.vorder.textY + 2.2" text-anchor="middle" font-size="0.7" fill="black">{{ firstName }}</text>
             </g>
 
-            <g :transform="`translate(${svgDimensions.xHinter}, ${svgDimensions.yPos})`">
+            <g :transform="`translate(${exportLayout.hinter.x}, ${exportLayout.hinter.y})`">
               <g clip-path="url(#clip-hinter-pdf)" stroke="blue" stroke-width="0.15" opacity="0.3">
                 <line v-for="i in 800" :key="'hp1'+i" :x1="-200 + i*1.5" y1="-100" :x2="i*1.5 - 100" y2="500" />
                 <line v-for="i in 800" :key="'hp2'+i" :x1="-200 + i*1.5" y1="500" :x2="i*1.5 - 100" y2="-100" />
               </g>
               <path :d="hinterTeil" fill="none" stroke="black" stroke-width="0.05" />
-              <text x="10" y="15" font-size="1" fill="black">Rückenteil {{ firstName }}</text>
+              <!-- Bruchkante und Fadenlauf -->
+              <path :d="exportDeko.hinter.bruch" stroke="black" stroke-width="0.05" fill="none" />
+              <text :transform="`translate(${exportDeko.hinter.bruchTextX}, ${exportDeko.hinter.bruchTextY}) rotate(-90)`" text-anchor="middle" font-size="0.6" fill="black">Stoffbruch</text>
+              <path :d="exportDeko.hinter.fadenlauf" stroke="black" stroke-width="0.05" fill="none" />
+              <!-- Logo und Beschriftung -->
+              <g :transform="exportDeko.hinter.logo" v-html="logoKleinInhalt"></g>
+              <text :x="exportDeko.hinter.textX" :y="exportDeko.hinter.textY" text-anchor="middle" font-size="1.2" fill="black">Rückenteil</text>
+              <text :x="exportDeko.hinter.textX" :y="exportDeko.hinter.textY + 1.2" text-anchor="middle" font-size="0.7" fill="black">1x im Stoffbruch</text>
+              <text :x="exportDeko.hinter.textX" :y="exportDeko.hinter.textY + 2.2" text-anchor="middle" font-size="0.7" fill="black">{{ firstName }}</text>
             </g>
 
-            <g :transform="`translate(${svgDimensions.xAermel}, ${svgDimensions.yPos}) rotate(${SuWi})`">
-              <g clip-path="url(#clip-aermel-pdf)" stroke="green" stroke-width="0.15" opacity="0.4">
-                <line v-for="i in 800" :key="'ap'+i" :x1="i*1.0" y1="-100" :x2="i*1.0" y2="500" />
+            <g :transform="`translate(${exportLayout.aermel.x}, ${exportLayout.aermel.y})`">
+              <!-- nur der Ärmel selbst wird gedreht, Beschriftung bleibt waagrecht -->
+              <g :transform="`rotate(${aermelDrehung})`">
+                <g clip-path="url(#clip-aermel-pdf)" stroke="green" stroke-width="0.15" opacity="0.4">
+                  <line v-for="i in 800" :key="'ap'+i" :x1="i*1.0" y1="-100" :x2="i*1.0" y2="500" />
+                </g>
+                <path :d="aermel" fill="none" stroke="black" stroke-width="0.05" />
               </g>
-              <path :d="aermel" fill="none" stroke="black" stroke-width="0.05" />
-              <text x="10" y="15" font-size="1" fill="black">Ärmel {{ firstName }}</text>
+              <!-- Bruchkante und Fadenlauf -->
+              <path :d="exportDeko.aermel.bruch" stroke="black" stroke-width="0.05" fill="none" />
+              <text :transform="`translate(${exportDeko.aermel.bruchTextX}, ${exportDeko.aermel.bruchTextY}) rotate(-90)`" text-anchor="middle" font-size="0.6" fill="black">Stoffbruch</text>
+              <path :d="exportDeko.aermel.fadenlauf" stroke="black" stroke-width="0.05" fill="none" />
+              <!-- Logo und Beschriftung -->
+              <g :transform="exportDeko.aermel.logo" v-html="logoKleinInhalt"></g>
+              <text :x="exportDeko.aermel.textX" :y="exportDeko.aermel.textY" text-anchor="middle" font-size="1.2" fill="black">Ärmel</text>
+              <text :x="exportDeko.aermel.textX" :y="exportDeko.aermel.textY + 1.2" text-anchor="middle" font-size="0.7" fill="black">2x im Stoffbruch</text>
+              <text :x="exportDeko.aermel.textX" :y="exportDeko.aermel.textY + 2.2" text-anchor="middle" font-size="0.7" fill="black">{{ firstName }}</text>
             </g>
           </g>
 
-          <g stroke="black" stroke-width="0.2">
-            <line x1="0" y1="5" x2="10" y2="5" />
-            <line x1="5" y1="0" x2="5" y2="10" />
-
-            <line x1="180" y1="5" x2="190" y2="5" />
-            <line x1="185" y1="0" x2="185" y2="10" />
-          </g>
-  
         </svg>
       </div>
 
